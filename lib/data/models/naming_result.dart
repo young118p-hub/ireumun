@@ -1,18 +1,39 @@
 // AI 작명 결과 모델
-// 사주 분석 + 추천 이름 목록
+// 가족 사주 분석 + 추천 이름 목록
 
 class NamingResult {
-  final SajuAnalysis saju;
+  final SajuAnalysis babySaju;
+  final SajuAnalysis? fatherSaju;
+  final SajuAnalysis? motherSaju;
+  final FamilyOhengAnalysis? familyAnalysis;
   final List<NameSuggestion> names;
 
   const NamingResult({
-    required this.saju,
+    required this.babySaju,
+    this.fatherSaju,
+    this.motherSaju,
+    this.familyAnalysis,
     required this.names,
   });
 
+  /// 기존 호환용 (단일 사주)
+  SajuAnalysis get saju => babySaju;
+
   factory NamingResult.fromJson(Map<String, dynamic> json) {
     return NamingResult(
-      saju: SajuAnalysis.fromJson(json['saju'] as Map<String, dynamic>),
+      babySaju: SajuAnalysis.fromJson(
+        json['babySaju'] as Map<String, dynamic>? ??
+            json['saju'] as Map<String, dynamic>,
+      ),
+      fatherSaju: json['fatherSaju'] != null
+          ? SajuAnalysis.fromJson(json['fatherSaju'])
+          : null,
+      motherSaju: json['motherSaju'] != null
+          ? SajuAnalysis.fromJson(json['motherSaju'])
+          : null,
+      familyAnalysis: json['familyAnalysis'] != null
+          ? FamilyOhengAnalysis.fromJson(json['familyAnalysis'])
+          : null,
       names: (json['names'] as List)
           .map((e) => NameSuggestion.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -20,22 +41,26 @@ class NamingResult {
   }
 
   Map<String, dynamic> toJson() => {
-        'saju': saju.toJson(),
+        'babySaju': babySaju.toJson(),
+        if (fatherSaju != null) 'fatherSaju': fatherSaju!.toJson(),
+        if (motherSaju != null) 'motherSaju': motherSaju!.toJson(),
+        if (familyAnalysis != null)
+          'familyAnalysis': familyAnalysis!.toJson(),
         'names': names.map((e) => e.toJson()).toList(),
       };
 }
 
 /// 사주 분석 결과
 class SajuAnalysis {
-  final String yearPillar; // 년주 (예: "갑자")
-  final String monthPillar; // 월주
-  final String dayPillar; // 일주
-  final String hourPillar; // 시주 (없으면 "미상")
-  final String dayMaster; // 일간 (일주의 천간)
-  final Map<String, int> ohengBalance; // 오행 분포 (목:2, 화:1, ...)
-  final String weakElement; // 부족한 오행
-  final String strongElement; // 강한 오행
-  final String summary; // 사주 종합 설명
+  final String yearPillar;
+  final String monthPillar;
+  final String dayPillar;
+  final String hourPillar;
+  final String dayMaster;
+  final Map<String, int> ohengBalance;
+  final String weakElement;
+  final String strongElement;
+  final String summary;
 
   const SajuAnalysis({
     required this.yearPillar,
@@ -80,20 +105,53 @@ class SajuAnalysis {
         'summary': summary,
       };
 
-  /// 사주 네 기둥 표시 문자열
   String get fourPillarsDisplay =>
       '$yearPillar / $monthPillar / $dayPillar / $hourPillar';
 }
 
+/// 가족 오행 균형 분석
+class FamilyOhengAnalysis {
+  final Map<String, int> combinedBalance; // 가족 전체 오행 합산
+  final String familyWeakElement; // 가족 전체 부족 오행
+  final String familyStrongElement; // 가족 전체 과잉 오행
+  final String recommendation; // AI 추천 코멘트
+
+  const FamilyOhengAnalysis({
+    required this.combinedBalance,
+    required this.familyWeakElement,
+    required this.familyStrongElement,
+    required this.recommendation,
+  });
+
+  factory FamilyOhengAnalysis.fromJson(Map<String, dynamic> json) {
+    final balanceRaw =
+        json['combinedBalance'] as Map<String, dynamic>? ?? {};
+    return FamilyOhengAnalysis(
+      combinedBalance:
+          balanceRaw.map((k, v) => MapEntry(k, (v as num).toInt())),
+      familyWeakElement: json['familyWeakElement'] as String? ?? '',
+      familyStrongElement: json['familyStrongElement'] as String? ?? '',
+      recommendation: json['recommendation'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'combinedBalance': combinedBalance,
+        'familyWeakElement': familyWeakElement,
+        'familyStrongElement': familyStrongElement,
+        'recommendation': recommendation,
+      };
+}
+
 /// 추천 이름 하나
 class NameSuggestion {
-  final String name; // 한글 이름 (2글자)
-  final String hanja; // 한자 이름
-  final String reading; // 한자 음독 (예: "民 백성 민, 俊 준걸 준")
-  final String meaning; // 이름 뜻 풀이
-  final String ohengMatch; // 오행 보완 설명
-  final int score; // 추천 점수 (1-100)
-  final String pronunciation; // 성+이름 발음 자연스러움 평가
+  final String name;
+  final String hanja;
+  final String reading;
+  final String meaning;
+  final String ohengMatch;
+  final int score;
+  final String pronunciation;
 
   const NameSuggestion({
     required this.name,

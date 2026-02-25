@@ -1,31 +1,51 @@
 // 이름운 - AI 사주 작명 앱
-// 진입점 & Provider 설정
+// 진입점 & Provider 설정 + Hive 초기화 + 탭 네비게이션
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'data/services/credit_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'data/services/purchase_service.dart';
+import 'data/services/result_storage_service.dart';
 import 'presentation/providers/naming_provider.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/my_results_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 크레딧 서비스 초기화
-  final creditService = CreditService();
-  await creditService.initialize();
+  // Hive 초기화
+  await Hive.initFlutter();
 
-  runApp(IreumunApp(creditService: creditService));
+  // 서비스 초기화
+  final purchaseService = PurchaseService();
+  await purchaseService.initialize();
+
+  final storageService = ResultStorageService();
+  await storageService.initialize();
+
+  runApp(IreumunApp(
+    purchaseService: purchaseService,
+    storageService: storageService,
+  ));
 }
 
 class IreumunApp extends StatelessWidget {
-  final CreditService creditService;
+  final PurchaseService purchaseService;
+  final ResultStorageService storageService;
 
-  const IreumunApp({super.key, required this.creditService});
+  const IreumunApp({
+    super.key,
+    required this.purchaseService,
+    required this.storageService,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => NamingProvider(creditService: creditService),
+      create: (_) => NamingProvider(
+        purchaseService: purchaseService,
+        storageService: storageService,
+      ),
       child: MaterialApp(
         title: '이름운',
         debugShowCheckedModeBanner: false,
@@ -64,7 +84,54 @@ class IreumunApp extends StatelessWidget {
         supportedLocales: const [
           Locale('ko', 'KR'),
         ],
-        home: const HomeScreen(),
+        home: const MainTabScreen(),
+      ),
+    );
+  }
+}
+
+/// 하단 탭 네비게이션 (홈 / 내 결과)
+class MainTabScreen extends StatefulWidget {
+  const MainTabScreen({super.key});
+
+  @override
+  State<MainTabScreen> createState() => _MainTabScreenState();
+}
+
+class _MainTabScreenState extends State<MainTabScreen> {
+  int _currentIndex = 0;
+
+  final _screens = const [
+    HomeScreen(),
+    MyResultsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF1A1A2E),
+        unselectedItemColor: const Color(0xFFB0B0B0),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: '홈',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_outlined),
+            activeIcon: Icon(Icons.folder),
+            label: '내 결과',
+          ),
+        ],
       ),
     );
   }

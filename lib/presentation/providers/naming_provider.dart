@@ -1,116 +1,342 @@
-// 작명 상태 관리 Provider
-// 입력 → API 호출 → 결과 관리 + 크레딧 연동
+// 작명/진단 상태 관리 Provider
+// B 방식: API 먼저 호출 → 1개 공개 → 결제 후 전체 공개
+// 미결제 결과 캐싱으로 악용 방지
 
 import 'package:flutter/foundation.dart';
 import '../../data/models/saju_input.dart';
 import '../../data/models/naming_result.dart';
+import '../../data/models/diagnosis_result.dart';
+import '../../data/models/saved_result.dart';
 import '../../data/services/claude_service.dart';
-import '../../data/services/credit_service.dart';
+import '../../data/services/purchase_service.dart';
+import '../../data/services/result_storage_service.dart';
 
-enum NamingState { idle, loading, success, error }
+enum AppState { idle, loading, success, error }
 
 class NamingProvider extends ChangeNotifier {
-  final CreditService creditService;
+  final PurchaseService purchaseService;
+  final ResultStorageService storageService;
 
-  NamingProvider({required this.creditService}) {
-    creditService.onCreditUpdated = () {
-      notifyListeners();
-    };
+  NamingProvider({
+    required this.purchaseService,
+    required this.storageService,
+  }) {
+    purchaseService.onStateUpdated = () => notifyListeners();
+    purchaseService.onPurchaseCompleted = _onPurchaseCompleted;
+    _loadCachedResults();
   }
 
+  // ============================================================
   // 상태
-  NamingState _state = NamingState.idle;
-  NamingState get state => _state;
-
-  NamingResult? _result;
-  NamingResult? get result => _result;
+  // ============================================================
+  AppState _state = AppState.idle;
+  AppState get state => _state;
 
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  SajuInput? _lastInput;
-  SajuInput? get lastInput => _lastInput;
+  // 작명 결과
+  NamingResult? _namingResult;
+  NamingResult? get namingResult => _namingResult;
+  FamilyNamingInput? _lastFamilyInput;
+  FamilyNamingInput? get lastFamilyInput => _lastFamilyInput;
+  SajuInput? _lastSimpleInput;
+  SajuInput? get lastSimpleInput => _lastSimpleInput;
 
-  // 크레딧 상태 프록시
-  int get credits => creditService.credits;
-  bool get canGenerate => creditService.canGenerate;
-  bool get isFreeAvailable => creditService.isFreeAvailable;
+  // 진단 결과
+  DiagnosisResult? _diagnosisResult;
+  DiagnosisResult? get diagnosisResult => _diagnosisResult;
+  DiagnosisInput? _lastDiagnosisInput;
+  DiagnosisInput? get lastDiagnosisInput => _lastDiagnosisInput;
 
-  // 현재 결과가 크레딧으로 해금됐는지 (무료 체험은 1번만 공개)
-  bool _currentResultUnlocked = false;
-  bool get isCurrentResultUnlocked => _currentResultUnlocked;
+  // 결제 상태
+  bool _isNamingPaid = false;
+  bool get isNamingPaid => _isNamingPaid;
 
-  /// 이름 생성 요청
-  Future<void> generateNames(SajuInput input) async {
-    if (!canGenerate) {
-      _errorMessage = '크레딧이 부족합니다. 크레딧을 구매해주세요.';
-      _state = NamingState.error;
-      notifyListeners();
+  bool _isDiagnosisPaid = false;
+  bool get isDiagnosisPaid => _isDiagnosisPaid;
+
+  // 무료 체험
+  bool get isFreeAvailable => purchaseService.isFreeAvailable;
+  bool _isFreeTrial = false;
+  bool get isFreeTrial => _isFreeTrial;
+
+  // 저장 결과
+  List<SavedResult> get savedResults => storageService.getAll();
+
+  // ============================================================
+  // 미결제 결과 캐시 로드 (앱 시작 시)
+  // ============================================================
+  void _loadCachedResults() {
+    // 미결제 작명 결과가 있으면 복원
+    final unpaidNaming = storageService.getUnpaid(SavedResultType.naming);
+    if (unpaidNaming != null) {
+      _namingResult = unpaidNaming.namingResult;
+      _lastFamilyInput = unpaidNaming.familyInput;
+      _lastSimpleInput = unpaidNaming.simpleInput;
+      _isNamingPaid = false;
+    }
+
+    // 미결제 진단 결과가 있으면 복원
+    final unpaidDiagnosis = storageService.getUnpaid(SavedResultType.diagnosis);
+    if (unpaidDiagnosis != null) {
+      _diagnosisResult = unpaidDiagnosis.diagnosisResult;
+      _lastDiagnosisInput = unpaidDiagnosis.diagnosisInput;
+      _isDiagnosisPaid = false;
+    }
+  }
+
+  // ============================================================
+  // 미결제 결과 존재 여부 (새 요청 차단용)
+  // ============================================================
+  bool get hasUnpaidNaming => storageService.hasUnpaid(SavedResultType.naming);
+  bool get hasUnpaidDiagnosis => storageService.hasUnpaid(SavedResultType.diagnosis);
+
+  // ============================================================
+  // 신규 작명 (가족 사주 기반)
+  // B 방식: 먼저 API 호출 → 미결제로 저장 → 결제 후 전체 공개
+  // ============================================================
+
+  /// 무료 체험 작명 (단일 입력, 1회만)
+  Future<void> generateFreeNames(SajuInput input) async {
+    if (!isFreeAvailable) {
+      _setError('무료 체험은 1회만 가능합니다.');
       return;
     }
 
-    _state = NamingState.loading;
-    _errorMessage = '';
-    _lastInput = input;
-    _currentResultUnlocked = false;
-    notifyListeners();
+    _setLoading();
 
     try {
-      _result = await ClaudeService.generateNames(input);
-      _state = NamingState.success;
+      _namingResult = await ClaudeService.generateNames(input);
+      _lastSimpleInput = input;
+      _lastFamilyInput = null;
+      _isFreeTrial = true;
+      _isNamingPaid = false;
+      await purchaseService.useFreeTrial();
 
-      // 크레딧 차감
-      if (isFreeAvailable) {
-        await creditService.useFreeTrialCredit();
-        // 무료 체험: 1번 이름만 공개
-        _currentResultUnlocked = false;
-      } else {
-        await creditService.useCredit();
-        // 크레딧 사용: 전체 이름 공개
-        _currentResultUnlocked = true;
-      }
-    } on Exception catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      _state = NamingState.error;
+      // 미결제 상태로 저장 (껐다 켜도 같은 결과)
+      await _saveUnpaidNaming();
+
+      _state = AppState.success;
+    } catch (e) {
+      _setError(e.toString().replaceFirst('Exception: ', ''));
     }
 
     notifyListeners();
   }
 
-  /// 크레딧으로 현재 결과 해금 (무료 체험 후 추가 해금)
-  Future<bool> unlockCurrentResult() async {
-    if (_currentResultUnlocked) return true;
-    if (credits <= 0) return false;
-
-    final success = await creditService.useCredit();
-    if (success) {
-      _currentResultUnlocked = true;
-      notifyListeners();
+  /// 유료 작명 - API 먼저 호출 (결제는 결과 화면에서)
+  Future<void> generateFamilyNames(FamilyNamingInput input) async {
+    // 미결제 결과가 있으면 차단
+    if (hasUnpaidNaming) {
+      _setError('이전 작명 결과가 미결제 상태입니다. 결제 후 새로운 작명이 가능합니다.');
+      return;
     }
-    return success;
+
+    _setLoading();
+    _lastFamilyInput = input;
+    _lastSimpleInput = null;
+
+    try {
+      _namingResult = await ClaudeService.generateFamilyNames(
+        familyInput: input,
+        nameCount: 5,
+      );
+      _isFreeTrial = false;
+      _isNamingPaid = false;
+      _state = AppState.success;
+
+      // 미결제 상태로 저장
+      await _saveUnpaidNaming();
+    } catch (e) {
+      _setError(e.toString().replaceFirst('Exception: ', ''));
+    }
+
+    notifyListeners();
   }
 
-  /// 크레딧 패키지 구매
-  Future<bool> purchaseCredits(CreditPackage package) async {
-    return await creditService.purchase(package);
+  // ============================================================
+  // 이름 진단
+  // ============================================================
+
+  /// 이름 진단 - API 먼저 호출
+  Future<void> diagnoseName(DiagnosisInput input) async {
+    if (hasUnpaidDiagnosis) {
+      _setError('이전 진단 결과가 미결제 상태입니다. 결제 후 새로운 진단이 가능합니다.');
+      return;
+    }
+
+    _setLoading();
+    _lastDiagnosisInput = input;
+
+    try {
+      _diagnosisResult = await ClaudeService.diagnoseName(input: input);
+      _isDiagnosisPaid = false;
+      _state = AppState.success;
+
+      // 미결제 상태로 저장
+      await _saveUnpaidDiagnosis(input);
+    } catch (e) {
+      _setError(e.toString().replaceFirst('Exception: ', ''));
+    }
+
+    notifyListeners();
   }
 
-  /// 크레딧 패키지 목록
-  List<CreditPackage> get packages => creditService.packages;
+  /// 진단 후 업그레이드 (추가 개선 이름 5개)
+  Future<void> upgradeFromDiagnosis() async {
+    if (_diagnosisResult == null || _lastDiagnosisInput == null) return;
 
-  /// 상태 초기화 (새로운 작명 시작)
-  void reset() {
-    _state = NamingState.idle;
-    _result = null;
+    _setLoading();
+
+    try {
+      final additionalNames = await ClaudeService.generateImprovementNames(
+        input: _lastDiagnosisInput!,
+        previousResult: _diagnosisResult!,
+        nameCount: 5,
+      );
+
+      _diagnosisResult = DiagnosisResult(
+        saju: _diagnosisResult!.saju,
+        diagnosis: _diagnosisResult!.diagnosis,
+        improvementNames: [
+          ..._diagnosisResult!.improvementNames,
+          ...additionalNames,
+        ],
+      );
+
+      _state = AppState.success;
+    } catch (e) {
+      _setError(e.toString().replaceFirst('Exception: ', ''));
+    }
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // 결제 흐름 (결과 화면에서 호출)
+  // ============================================================
+
+  /// 결제 시작
+  Future<bool> purchaseProduct(ProductType type) async {
+    final product = purchaseService.getProduct(type);
+    return await purchaseService.purchase(product);
+  }
+
+  void _onPurchaseCompleted(ProductType type) {
+    switch (type) {
+      case ProductType.naming:
+        _unlockNaming();
+        break;
+      case ProductType.diagnosis:
+        _unlockDiagnosis();
+        break;
+      case ProductType.bundle:
+        _unlockNaming();
+        _unlockDiagnosis();
+        break;
+      case ProductType.diagnosisUpgrade:
+        break;
+    }
+    notifyListeners();
+  }
+
+  /// 작명 결과 전체 공개
+  Future<void> _unlockNaming() async {
+    _isNamingPaid = true;
+    final unpaid = storageService.getUnpaid(SavedResultType.naming);
+    if (unpaid != null) {
+      await storageService.markAsPaid(unpaid.id);
+    }
+  }
+
+  /// 진단 결과 전체 공개
+  Future<void> _unlockDiagnosis() async {
+    _isDiagnosisPaid = true;
+    final unpaid = storageService.getUnpaid(SavedResultType.diagnosis);
+    if (unpaid != null) {
+      await storageService.markAsPaid(unpaid.id);
+    }
+  }
+
+  // ============================================================
+  // 미결제 결과 저장
+  // ============================================================
+
+  Future<void> _saveUnpaidNaming() async {
+    if (_namingResult == null) return;
+
+    final saved = SavedResult(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: SavedResultType.naming,
+      savedAt: DateTime.now(),
+      isPaid: false,
+      familyInput: _lastFamilyInput,
+      simpleInput: _lastSimpleInput,
+      namingResult: _namingResult,
+    );
+
+    await storageService.save(saved);
+  }
+
+  Future<void> _saveUnpaidDiagnosis(DiagnosisInput input) async {
+    if (_diagnosisResult == null) return;
+
+    final saved = SavedResult(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: SavedResultType.diagnosis,
+      savedAt: DateTime.now(),
+      isPaid: false,
+      diagnosisInput: input,
+      diagnosisResult: _diagnosisResult,
+    );
+
+    await storageService.save(saved);
+  }
+
+  // ============================================================
+  // 결과 관리
+  // ============================================================
+
+  /// 저장 결과 삭제
+  Future<void> deleteSavedResult(String id) async {
+    await storageService.delete(id);
+    notifyListeners();
+  }
+
+  // ============================================================
+  // 유틸
+  // ============================================================
+
+  void _setLoading() {
+    _state = AppState.loading;
     _errorMessage = '';
-    _lastInput = null;
-    _currentResultUnlocked = false;
+    notifyListeners();
+  }
+
+  void _setError(String message) {
+    _errorMessage = message;
+    _state = AppState.error;
+  }
+
+  /// 상태 초기화 (새로운 세션)
+  void reset() {
+    _state = AppState.idle;
+    _namingResult = null;
+    _diagnosisResult = null;
+    _lastFamilyInput = null;
+    _lastSimpleInput = null;
+    _lastDiagnosisInput = null;
+    _isNamingPaid = false;
+    _isDiagnosisPaid = false;
+    _isFreeTrial = false;
+    _errorMessage = '';
     notifyListeners();
   }
 
   @override
   void dispose() {
-    creditService.dispose();
+    purchaseService.dispose();
     super.dispose();
   }
 }
