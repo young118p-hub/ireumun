@@ -16,6 +16,12 @@ dependencies:
   in_app_purchase: ^3.2.0
   shared_preferences: ^2.3.0
   flutter_animate: ^4.5.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.0
+  device_info_plus: ^11.0.0
+  share_plus: ^10.0.0
+  gallery_saver_plus: ^3.0.0
 
 dev_dependencies:
   flutter_test:
