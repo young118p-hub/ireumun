@@ -104,13 +104,15 @@ class NameCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           const Divider(height: 1, color: Color(0xFFF0EDE8)),
           const SizedBox(height: 14),
 
-          // 한자 음독
-          _buildInfoRow('한자', name.reading),
-          const SizedBox(height: 10),
+          // 한자 글자별 풀이 (이름 글자만)
+          _buildHanjaBreakdown(),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const SizedBox(height: 12),
 
           // 뜻 풀이
           _buildInfoRow('의미', name.meaning),
@@ -125,6 +127,66 @@ class NameCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// "昌(밝을 창) 英(꽃부리 영)" 형태의 reading을 파싱해서
+  /// 글자별 한자 + 뜻을 카드로 표시
+  Widget _buildHanjaBreakdown() {
+    final segments = _parseReading(name.reading);
+    if (segments.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      children: segments.map((seg) {
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(
+              right: seg == segments.last ? 0 : 8,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F6F0),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  seg.hanja,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  seg.reading,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF666666),
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// "昌(밝을 창) 英(꽃부리 영)" → [HanjaSeg(昌, 밝을 창), HanjaSeg(英, 꽃부리 영)]
+  List<_HanjaSeg> _parseReading(String reading) {
+    final result = <_HanjaSeg>[];
+    // 패턴: 한자문자(내용) 형태로 분리
+    final regex = RegExp(r'(\S+?)\(([^)]+)\)');
+    for (final match in regex.allMatches(reading)) {
+      result.add(_HanjaSeg(
+        hanja: match.group(1) ?? '',
+        reading: match.group(2) ?? '',
+      ));
+    }
+    return result;
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -165,7 +227,7 @@ class NameCard extends StatelessWidget {
     return const Color(0xFFFF7675);
   }
 
-  /// 성씨에 대응하는 대표 한자 (간략 매핑)
+  /// 성씨에 대응하는 대표 한자
   String _getHanjaSurname(String surname) {
     const map = {
       '김': '金', '이': '李', '박': '朴', '최': '崔', '정': '鄭',
@@ -179,4 +241,10 @@ class NameCard extends StatelessWidget {
     };
     return map[surname] ?? '';
   }
+}
+
+class _HanjaSeg {
+  final String hanja;
+  final String reading;
+  const _HanjaSeg({required this.hanja, required this.reading});
 }

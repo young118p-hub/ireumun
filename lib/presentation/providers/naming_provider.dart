@@ -125,6 +125,27 @@ class NamingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 유료 작명 - 본인 사주만 (부모 미포함)
+  Future<void> generatePaidSimpleNames(SajuInput input) async {
+    if (hasUnpaidNaming) {
+      _setError('이전 작명 결과가 미결제 상태입니다. 결제 후 새로운 작명이 가능합니다.');
+      return;
+    }
+    _setLoading();
+    _lastSimpleInput = input;
+    _lastFamilyInput = null;
+    try {
+      _namingResult = await ClaudeService.generateNames(input);
+      _isFreeTrial = false;
+      _isNamingPaid = false;
+      _state = AppState.success;
+      await _saveUnpaidNaming();
+    } catch (e) {
+      _setError(e.toString().replaceFirst('Exception: ', ''));
+    }
+    notifyListeners();
+  }
+
   /// 유료 작명 - API 먼저 호출 (결제는 결과 화면에서)
   Future<void> generateFamilyNames(FamilyNamingInput input) async {
     // 미결제 결과가 있으면 차단
@@ -301,6 +322,34 @@ class NamingProvider extends ChangeNotifier {
   /// 저장 결과 삭제
   Future<void> deleteSavedResult(String id) async {
     await storageService.delete(id);
+    notifyListeners();
+  }
+
+  /// 미결제 작명 결과 버리고 새로 시작
+  Future<void> discardUnpaidNaming() async {
+    final unpaid = storageService.getUnpaid(SavedResultType.naming);
+    if (unpaid != null) {
+      await storageService.delete(unpaid.id);
+    }
+    _namingResult = null;
+    _lastFamilyInput = null;
+    _lastSimpleInput = null;
+    _isNamingPaid = false;
+    _isFreeTrial = false;
+    _state = AppState.idle;
+    notifyListeners();
+  }
+
+  /// 미결제 진단 결과 버리고 새로 시작
+  Future<void> discardUnpaidDiagnosis() async {
+    final unpaid = storageService.getUnpaid(SavedResultType.diagnosis);
+    if (unpaid != null) {
+      await storageService.delete(unpaid.id);
+    }
+    _diagnosisResult = null;
+    _lastDiagnosisInput = null;
+    _isDiagnosisPaid = false;
+    _state = AppState.idle;
     notifyListeners();
   }
 

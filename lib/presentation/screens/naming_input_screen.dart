@@ -16,24 +16,27 @@ class NamingInputScreen extends StatefulWidget {
 }
 
 class _NamingInputScreenState extends State<NamingInputScreen> {
-  // 아기 정보
+  // 본인 정보
   String _surname = '김';
   Gender _babyGender = Gender.male;
-  DateTime _babyDate = DateTime(2024, 1, 1);
+  DateTime _babyDate = DateTime(1995, 1, 1);
   int _babyHour = -1;
   bool _babyKnowsHour = false;
 
+  // 부모 포함 여부 (선택)
+  bool _includeParents = false;
+
   // 아빠 정보
-  DateTime _fatherDate = DateTime(1990, 1, 1);
+  DateTime _fatherDate = DateTime(1965, 1, 1);
   int _fatherHour = -1;
   bool _fatherKnowsHour = false;
 
   // 엄마 정보
-  DateTime _motherDate = DateTime(1990, 1, 1);
+  DateTime _motherDate = DateTime(1968, 1, 1);
   int _motherHour = -1;
   bool _motherKnowsHour = false;
 
-  // 현재 펼쳐진 섹션 (0=아기, 1=아빠, 2=엄마)
+  // 현재 펼쳐진 섹션 (0=본인, 1=아빠, 2=엄마)
   int _expandedSection = 0;
 
   @override
@@ -64,7 +67,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '아기와 부모님의 사주를 함께 분석하여\n가족 오행 균형에 맞는 이름을 추천합니다.',
+                      '본인 사주를 기반으로 이름을 추천합니다.\n부모 사주를 추가하면 가족 오행 균형도 반영됩니다.',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF666666),
@@ -76,13 +79,62 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // 아기 정보
+            // 부모 사주 포함 토글
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.people_outline, size: 20, color: Color(0xFF1A1A2E)),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '부모 사주 포함',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        Text(
+                          '가족 오행 균형 분석으로 더 정교한 추천',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _includeParents,
+                    onChanged: (v) => setState(() => _includeParents = v),
+                    activeThumbColor: const Color(0xFF1A1A2E),
+                    activeTrackColor: const Color(0xFF1A1A2E).withValues(alpha: 0.4),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 본인 정보
             _buildAccordionSection(
               index: 0,
-              icon: Icons.child_care,
-              title: '아기 정보',
+              icon: Icons.person_outline,
+              title: '본인 정보',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -113,63 +165,65 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               ),
             ),
 
-            const SizedBox(height: 12),
+            if (_includeParents) ...[
+              const SizedBox(height: 12),
 
-            // 아빠 정보
-            _buildAccordionSection(
-              index: 1,
-              icon: Icons.person,
-              title: '아빠 정보',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLabel('생년월일 (양력)'),
-                  const SizedBox(height: 8),
-                  _buildDateSelector(_fatherDate, (d) => setState(() => _fatherDate = d)),
-                  const SizedBox(height: 16),
-                  _buildLabel('태어난 시간'),
-                  const SizedBox(height: 8),
-                  _buildHourSelector(
-                    knowsHour: _fatherKnowsHour,
-                    selectedHour: _fatherHour,
-                    onKnowsHourChanged: (v) => setState(() {
-                      _fatherKnowsHour = v;
-                      if (!v) _fatherHour = -1;
-                    }),
-                    onHourChanged: (h) => setState(() => _fatherHour = h),
-                  ),
-                ],
+              // 아빠 정보
+              _buildAccordionSection(
+                index: 1,
+                icon: Icons.person,
+                title: '아빠 정보',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel('생년월일 (양력)'),
+                    const SizedBox(height: 8),
+                    _buildDateSelector(_fatherDate, (d) => setState(() => _fatherDate = d)),
+                    const SizedBox(height: 16),
+                    _buildLabel('태어난 시간'),
+                    const SizedBox(height: 8),
+                    _buildHourSelector(
+                      knowsHour: _fatherKnowsHour,
+                      selectedHour: _fatherHour,
+                      onKnowsHourChanged: (v) => setState(() {
+                        _fatherKnowsHour = v;
+                        if (!v) _fatherHour = -1;
+                      }),
+                      onHourChanged: (h) => setState(() => _fatherHour = h),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // 엄마 정보
-            _buildAccordionSection(
-              index: 2,
-              icon: Icons.person,
-              title: '엄마 정보',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLabel('생년월일 (양력)'),
-                  const SizedBox(height: 8),
-                  _buildDateSelector(_motherDate, (d) => setState(() => _motherDate = d)),
-                  const SizedBox(height: 16),
-                  _buildLabel('태어난 시간'),
-                  const SizedBox(height: 8),
-                  _buildHourSelector(
-                    knowsHour: _motherKnowsHour,
-                    selectedHour: _motherHour,
-                    onKnowsHourChanged: (v) => setState(() {
-                      _motherKnowsHour = v;
-                      if (!v) _motherHour = -1;
-                    }),
-                    onHourChanged: (h) => setState(() => _motherHour = h),
-                  ),
-                ],
+              // 엄마 정보
+              _buildAccordionSection(
+                index: 2,
+                icon: Icons.person,
+                title: '엄마 정보',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel('생년월일 (양력)'),
+                    const SizedBox(height: 8),
+                    _buildDateSelector(_motherDate, (d) => setState(() => _motherDate = d)),
+                    const SizedBox(height: 16),
+                    _buildLabel('태어난 시간'),
+                    const SizedBox(height: 8),
+                    _buildHourSelector(
+                      knowsHour: _motherKnowsHour,
+                      selectedHour: _motherHour,
+                      onKnowsHourChanged: (v) => setState(() {
+                        _motherKnowsHour = v;
+                        if (!v) _motherHour = -1;
+                      }),
+                      onHourChanged: (h) => setState(() => _motherHour = h),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
 
             const SizedBox(height: 32),
 
@@ -309,9 +363,9 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
   Widget _buildGenderSelector() {
     return Row(
       children: [
-        _buildGenderChip('남아', Gender.male, Icons.male),
+        _buildGenderChip('남', Gender.male, Icons.male),
         const SizedBox(width: 10),
-        _buildGenderChip('여아', Gender.female, Icons.female),
+        _buildGenderChip('여', Gender.female, Icons.female),
       ],
     );
   }
@@ -539,7 +593,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                         ),
                       ),
                       SizedBox(width: 12),
-                      Text('가족 사주 분석 중...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text('사주 분석 중...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   )
                 : const Text(
@@ -553,9 +607,9 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
   }
 
   void _onSubmit() async {
-    // 아기 시간 검증
+    // 시간 검증
     if (_babyKnowsHour && _babyHour < 0) {
-      _showSnackBar('아기의 태어난 시간을 선택해주세요.');
+      _showSnackBar('태어난 시간을 선택해주세요.');
       return;
     }
 
@@ -571,28 +625,22 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
       return;
     }
 
-    // 무료 체험 가능 시 단일 입력으로 처리
+    final selfInput = SajuInput(
+      year: _babyDate.year,
+      month: _babyDate.month,
+      day: _babyDate.day,
+      hour: _babyHour,
+      gender: _babyGender,
+      surname: _surname,
+    );
+
+    // 무료 체험: 단일 입력
     if (provider.isFreeAvailable) {
-      final input = SajuInput(
-        year: _babyDate.year,
-        month: _babyDate.month,
-        day: _babyDate.day,
-        hour: _babyHour,
-        gender: _babyGender,
-        surname: _surname,
-      );
-      await provider.generateFreeNames(input);
-    } else {
-      // 유료 작명: API 먼저 호출 (결제는 결과 화면에서)
+      await provider.generateFreeNames(selfInput);
+    } else if (_includeParents) {
+      // 유료 + 부모 포함: 가족 오행 분석
       final familyInput = FamilyNamingInput(
-        baby: SajuInput(
-          year: _babyDate.year,
-          month: _babyDate.month,
-          day: _babyDate.day,
-          hour: _babyHour,
-          gender: _babyGender,
-          surname: _surname,
-        ),
+        baby: selfInput,
         father: SajuInput(
           year: _fatherDate.year,
           month: _fatherDate.month,
@@ -610,8 +658,10 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
           surname: _surname,
         ),
       );
-
       await provider.generateFamilyNames(familyInput);
+    } else {
+      // 유료 + 본인만: 단일 사주 작명
+      await provider.generatePaidSimpleNames(selfInput);
     }
 
     if (!mounted) return;

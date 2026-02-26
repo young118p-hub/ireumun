@@ -91,6 +91,28 @@ class DiagnosisResultScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+                // 새로 진단하기 (미결제 상태일 때만)
+                if (!isPaid)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: TextButton(
+                        onPressed: () => _confirmDiscard(context, provider),
+                        child: const Text(
+                          '이 결과 버리고 새로 진단하기',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFFAAAAAA),
+                            decoration: TextDecoration.underline,
+                            decorationColor: Color(0xFFAAAAAA),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // 돌아가기
                 SizedBox(
                   width: double.infinity,
@@ -117,6 +139,44 @@ class DiagnosisResultScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ============================================================
+  // 새로 진단하기 (미결제 결과 버리기)
+  // ============================================================
+  void _confirmDiscard(BuildContext context, NamingProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '결과를 버리시겠어요?',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          '현재 진단 결과가 삭제되고\n처음부터 다시 진단할 수 있습니다.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF666666), height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소', style: TextStyle(color: Color(0xFF8E8E93))),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await provider.discardUnpaidDiagnosis();
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text(
+              '버리고 새로 시작',
+              style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -2,6 +2,7 @@
 // 진입점 & Provider 설정 + Hive 초기화 + 탭 네비게이션
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'data/services/purchase_service.dart';
@@ -78,8 +79,9 @@ class IreumunApp extends StatelessWidget {
           ),
         ),
         localizationsDelegates: const [
-          DefaultMaterialLocalizations.delegate,
-          DefaultWidgetsLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [
           Locale('ko', 'KR'),
