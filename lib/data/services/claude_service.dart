@@ -68,14 +68,19 @@ class ClaudeService {
 
     final response = await _callWithRetry(body);
 
-    // 3. 결과에 코드 계산 사주 결합
-    final result = NamingResult.fromJson(response);
+    // 3. 서버 응답에서 names/familyAnalysis만 파싱 (saju는 클라이언트 계산값 사용)
+    final names = (response['names'] as List)
+        .map((e) => NameSuggestion.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final familyAnalysis = response['familyAnalysis'] != null
+        ? FamilyOhengAnalysis.fromJson(response['familyAnalysis'] as Map<String, dynamic>)
+        : null;
     return NamingResult(
       babySaju: SajuAnalysis.fromJson(babySaju.toSajuAnalysisJson()),
       fatherSaju: SajuAnalysis.fromJson(fatherSaju.toSajuAnalysisJson()),
       motherSaju: SajuAnalysis.fromJson(motherSaju.toSajuAnalysisJson()),
-      familyAnalysis: result.familyAnalysis,
-      names: result.names,
+      familyAnalysis: familyAnalysis,
+      names: names,
     );
   }
 
@@ -108,12 +113,15 @@ class ClaudeService {
 
     final response = await _callWithRetry(body);
 
-    // 3. 결과에 코드 계산 사주 결합
-    final result = DiagnosisResult.fromJson(response);
+    // 3. 서버 응답에서 diagnosis/improvementNames만 파싱 (saju는 클라이언트 계산값 사용)
+    final diagnosis = NameDiagnosis.fromJson(response['diagnosis'] as Map<String, dynamic>);
+    final improvementNames = (response['improvementNames'] as List? ?? [])
+        .map((e) => NameSuggestion.fromJson(e as Map<String, dynamic>))
+        .toList();
     return DiagnosisResult(
       saju: SajuAnalysis.fromJson(saju.toSajuAnalysisJson()),
-      diagnosis: result.diagnosis,
-      improvementNames: result.improvementNames,
+      diagnosis: diagnosis,
+      improvementNames: improvementNames,
     );
   }
 
@@ -174,10 +182,12 @@ class ClaudeService {
     };
 
     final response = await _callWithRetry(body);
-    final result = NamingResult.fromJson(response);
+    final names = (response['names'] as List)
+        .map((e) => NameSuggestion.fromJson(e as Map<String, dynamic>))
+        .toList();
     return NamingResult(
       babySaju: SajuAnalysis.fromJson(saju.toSajuAnalysisJson()),
-      names: result.names,
+      names: names,
     );
   }
 

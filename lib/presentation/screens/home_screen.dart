@@ -34,7 +34,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               const Text(
-                'AI 사주 작명',
+                '사주 기반 이름 분석',
                 style: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF8E8E93),
@@ -72,12 +72,12 @@ class HomeScreen extends StatelessWidget {
               _ServiceCard(
                 icon: Icons.auto_awesome,
                 title: '신규 작명',
-                subtitle: '아기 + 부모 사주 기반\n최적의 이름을 찾아드려요',
+                subtitle: '본인 + 가족 사주 기반\n사주에 맞는 이름을 찾아드려요',
                 price: '₩11,900',
                 color: const Color(0xFF1A1A2E),
                 features: const [
-                  '가족 오행 균형 분석',
-                  '사주 기반 이름 5개 추천',
+                  '가족 오행 균형 종합 분석',
+                  '사주 맞춤 이름 5개 추천',
                   '한자 뜻풀이 & 발음 평가',
                 ],
                 onTap: () {
