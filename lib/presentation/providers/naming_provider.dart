@@ -104,6 +104,11 @@ class NamingProvider extends ChangeNotifier {
       return;
     }
 
+    // 이전 미결제 결과가 있으면 자동 삭제
+    if (hasUnpaidNaming) {
+      await discardUnpaidNaming();
+    }
+
     _setLoading();
 
     try {
@@ -128,8 +133,7 @@ class NamingProvider extends ChangeNotifier {
   /// 유료 작명 - 본인 사주만 (부모 미포함)
   Future<void> generatePaidSimpleNames(SajuInput input) async {
     if (hasUnpaidNaming) {
-      _setError('이전 작명 결과가 미결제 상태입니다. 결제 후 새로운 작명이 가능합니다.');
-      return;
+      await discardUnpaidNaming();
     }
     _setLoading();
     _lastSimpleInput = input;
@@ -148,10 +152,8 @@ class NamingProvider extends ChangeNotifier {
 
   /// 유료 작명 - API 먼저 호출 (결제는 결과 화면에서)
   Future<void> generateFamilyNames(FamilyNamingInput input) async {
-    // 미결제 결과가 있으면 차단
     if (hasUnpaidNaming) {
-      _setError('이전 작명 결과가 미결제 상태입니다. 결제 후 새로운 작명이 가능합니다.');
-      return;
+      await discardUnpaidNaming();
     }
 
     _setLoading();
