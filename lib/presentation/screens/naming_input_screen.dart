@@ -436,6 +436,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
       initialDate: initial,
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
+      initialEntryMode: DatePickerEntryMode.input,
       locale: const Locale('ko', 'KR'),
       builder: (context, child) {
         return Theme(
@@ -615,14 +616,9 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
 
     final provider = context.read<NamingProvider>();
 
-    // 미결제 결과가 있으면 차단 → 결과 화면으로 보냄
+    // 미결제 결과가 있으면 버리고 새로 생성
     if (provider.hasUnpaidNaming) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ResultScreen()),
-      );
-      return;
+      await provider.discardUnpaidNaming();
     }
 
     final selfInput = SajuInput(

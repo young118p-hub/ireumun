@@ -111,6 +111,7 @@ async function callClaude(prompt: string): Promise<string> {
     body: JSON.stringify({
       model: CLAUDE_MODEL,
       max_tokens: 4096,
+      temperature: 0.9,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -174,6 +175,11 @@ function buildNamingPrompt(body: Record<string, any>): string {
 - 발음 자연스럽고 현대적이며 품격 있는 이름
 - 점수: 종합 1~100점
 
+## 이름 품질 필터 (반드시 준수)
+- 현대 한국에서 실제로 쓰이는 자연스러운 이름 추천 (로하, 리아, 서아, 이서 같은 현대식 이름도 OK)
+- 금지: 명백한 일상 명사(현금, 대박, 부자, 도둑 등), 성씨와 합쳤을 때 우스꽝스러운 단어가 되는 경우
+- 한자의 뜻이 부정적인 경우 금지 (죽을 사, 병 병 등)
+
 ## 응답 형식 (반드시 JSON만 출력)
 \`\`\`json
 {
@@ -223,6 +229,11 @@ function buildNamingSimplePrompt(body: Record<string, any>): string {
 - 발음 자연스럽고 현대적이며 품격 있는 이름
 - 점수: 종합 1~100점
 
+## 이름 품질 필터 (반드시 준수)
+- 현대 한국에서 실제로 쓰이는 자연스러운 이름 추천 (로하, 리아, 서아, 이서 같은 현대식 이름도 OK)
+- 금지: 명백한 일상 명사(현금, 대박, 부자, 도둑 등), 성씨와 합쳤을 때 우스꽝스러운 단어가 되는 경우
+- 한자의 뜻이 부정적인 경우 금지 (죽을 사, 병 병 등)
+
 ## 응답 형식 (반드시 JSON만 출력)
 \`\`\`json
 {
@@ -240,7 +251,7 @@ function buildNamingSimplePrompt(body: Record<string, any>): string {
 }
 \`\`\`
 
-중요: JSON만 출력. 이름 정확히 ${nameCount}개.`;
+중요: JSON만 출력. 이름 정확히 ${nameCount}개. 매번 다양하고 새로운 이름을 추천하세요. 이전에 추천했던 이름과 겹치지 않도록 창의적으로 작명하세요.`;
 }
 
 // ============================================================
@@ -358,7 +369,7 @@ function buildDiagnosisUpgradePrompt(body: Record<string, any>): string {
 }
 \`\`\`
 
-중요: JSON만 출력. 이름 정확히 ${nameCount}개.`;
+중요: JSON만 출력. 이름 정확히 ${nameCount}개. 매번 다양하고 새로운 이름을 추천하세요. 이전에 추천했던 이름과 겹치지 않도록 창의적으로 작명하세요.`;
 }
 
 // ============================================================

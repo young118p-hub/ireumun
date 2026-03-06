@@ -192,28 +192,6 @@ class ResultScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 새로 작명하기 (미결제 상태일 때만)
-                if (!isPaid)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: TextButton(
-                        onPressed: () => _confirmDiscard(context, provider),
-                        child: const Text(
-                          '이 결과 버리고 새로 작명하기',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFFAAAAAA),
-                            decoration: TextDecoration.underline,
-                            decorationColor: Color(0xFFAAAAAA),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
                 // 돌아가기 버튼
                 SizedBox(
                   width: double.infinity,
@@ -344,7 +322,7 @@ class ResultScreen extends StatelessWidget {
                 elevation: 0,
               ),
               child: const Text(
-                '₩11,900 결제하고 전체 보기',
+                '₩7,900 결제하고 전체 보기',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
@@ -400,7 +378,7 @@ class ResultScreen extends StatelessWidget {
                 elevation: 0,
               ),
               child: const Text(
-                '₩11,900 - 전체 이름 보기',
+                '₩7,900 - 전체 이름 보기',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
