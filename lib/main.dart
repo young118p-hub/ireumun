@@ -1,53 +1,99 @@
 // 이름운 - AI 사주 작명 앱
-// 진입점 & Provider 설정 + Hive 초기화 + 탭 네비게이션
+// 진입점 & Provider 설정 + Hive·Supabase 초기화 + 탭 네비게이션
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/config/app_env.dart';
+import 'data/services/api_service.dart';
+import 'data/services/device_id_service.dart';
 import 'data/services/purchase_service.dart';
 import 'data/services/result_storage_service.dart';
 import 'presentation/providers/naming_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/my_results_screen.dart';
 
+/// 결제 완료·취소 같은 안내를 어느 화면에서든 띄우기 위한 키
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!AppEnv.isConfigured) {
+    runApp(const _MissingConfigApp());
+    return;
+  }
 
   // Hive 초기화
   await Hive.initFlutter();
 
+  await Supabase.initialize(
+    url: AppEnv.supabaseUrl,
+    publishableKey: AppEnv.supabasePublishableKey,
+  );
+
   // 서비스 초기화
-  final purchaseService = PurchaseService();
+  final api = SupabaseApi(Supabase.instance.client, DeviceIdService());
+  final purchaseService = PurchaseService(
+    billing: InAppPurchaseGateway(),
+    api: api,
+  );
   await purchaseService.initialize();
 
   final storageService = ResultStorageService();
   await storageService.initialize();
 
-  runApp(IreumunApp(
+  final provider = NamingProvider(
     purchaseService: purchaseService,
     storageService: storageService,
-  ));
+    api: api,
+  )..onNotice = (message) {
+      scaffoldMessengerKey.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    };
+
+  runApp(IreumunApp(provider: provider));
+
+  // 로그인·동기화·덜 끝난 결제 이어받기 (화면은 먼저 띄운다)
+  provider.start();
 }
 
-class IreumunApp extends StatelessWidget {
-  final PurchaseService purchaseService;
-  final ResultStorageService storageService;
-
-  const IreumunApp({
-    super.key,
-    required this.purchaseService,
-    required this.storageService,
-  });
+/// 빌드 설정(env/*.json)이 빠졌을 때
+class _MissingConfigApp extends StatelessWidget {
+  const _MissingConfigApp();
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => NamingProvider(
-        purchaseService: purchaseService,
-        storageService: storageService,
+    return const MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              '서버 설정이 없습니다.\nflutter run --dart-define-from-file=env/dev.json',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class IreumunApp extends StatelessWidget {
+  final NamingProvider provider;
+
+  const IreumunApp({super.key, required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: provider,
       child: MaterialApp(
+        scaffoldMessengerKey: scaffoldMessengerKey,
         title: '이름운',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

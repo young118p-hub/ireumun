@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../data/services/purchase_service.dart';
 import '../../data/services/share_service.dart';
 import '../providers/naming_provider.dart';
+import '../../data/models/naming_result.dart';
 import '../widgets/name_card.dart';
 import '../widgets/saju_card.dart';
 import '../widgets/family_saju_card.dart';
@@ -45,8 +46,10 @@ class ResultScreen extends StatelessWidget {
 
           final isPaid = provider.isNamingPaid;
           final isFreeTrial = provider.isFreeTrial;
-          final surname = provider.lastFamilyInput?.baby.surname ??
-              provider.lastSimpleInput?.surname ?? '';
+          final surname = provider.namingSurname;
+          // 결제 전에는 서버가 첫 이름만 보낸다. 나머지는 자리만 보여준다.
+          final lockedCount = isPaid ? 0 : provider.lockedNamingCount;
+          final totalCount = result.names.length + lockedCount;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -84,7 +87,7 @@ class ResultScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${result.names.length}개',
+                        '$totalCount개',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white,
@@ -117,10 +120,10 @@ class ResultScreen extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // 이름 카드 리스트
-                ...List.generate(result.names.length, (index) {
-                  final name = result.names[index];
-                  // 1번째 이름은 항상 공개, 나머지는 결제 후
-                  final isVisible = index == 0 || isPaid;
+                ...List.generate(totalCount, (index) {
+                  // 받은 이름은 공개, 아직 못 받은 이름(결제 전)은 잠금 자리
+                  final isVisible = index < result.names.length;
+                  final name = isVisible ? result.names[index] : _lockedPlaceholder;
 
                   if (isVisible) {
                     return Padding(
@@ -293,7 +296,9 @@ class ResultScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '나머지 ${(result.names.length) - 1}개의 추천 이름과\n가족 오행 분석을 확인하세요',
+            result.familyAnalysis == null && provider.lastFamilyInput != null
+                ? '나머지 ${provider.lockedNamingCount}개의 추천 이름과\n가족 오행 분석을 확인하세요'
+                : '나머지 ${provider.lockedNamingCount}개의 추천 이름을 확인하세요',
             style: const TextStyle(fontSize: 13, color: Colors.white70),
             textAlign: TextAlign.center,
           ),
@@ -302,17 +307,10 @@ class ResultScreen extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () async {
-                final success = await provider.purchaseProduct(ProductType.naming);
-                if (!success && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('결제가 취소되었습니다.'),
-                      backgroundColor: Color(0xFF8E8E93),
-                    ),
-                  );
-                }
-              },
+              // 결제 결과(완료·취소)는 provider가 안내를 띄운다
+              onPressed: provider.purchaseBusy
+                  ? null
+                  : () => provider.purchase(ProductType.naming),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF1A1A2E),
@@ -321,9 +319,10 @@ class ResultScreen extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                '₩7,900 결제하고 전체 보기',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              child: Text(
+                provider.purchaseStatus ??
+                    '${provider.product(ProductType.naming).priceString} 결제하고 전체 보기',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -358,7 +357,7 @@ class ResultScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '나머지 ${(result.names.length) - 1}개 이름 + 가족 사주 분석까지!',
+            '나머지 ${provider.lockedNamingCount}개 이름도 확인해 보세요',
             style: const TextStyle(fontSize: 13, color: Colors.white70),
           ),
           const SizedBox(height: 16),
@@ -366,9 +365,9 @@ class ResultScreen extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () async {
-                await provider.purchaseProduct(ProductType.naming);
-              },
+              onPressed: provider.purchaseBusy
+                  ? null
+                  : () => provider.purchase(ProductType.naming),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF4CAF50),
@@ -377,9 +376,10 @@ class ResultScreen extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                '₩7,900 - 전체 이름 보기',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              child: Text(
+                provider.purchaseStatus ??
+                    '${provider.product(ProductType.naming).priceString} - 전체 이름 보기',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -394,8 +394,7 @@ class ResultScreen extends StatelessWidget {
   void _showShareOptions(BuildContext context, NamingProvider provider) {
     final result = provider.namingResult;
     if (result == null) return;
-    final surname = provider.lastFamilyInput?.baby.surname ??
-        provider.lastSimpleInput?.surname ?? '';
+    final surname = provider.namingSurname;
 
     showModalBottomSheet(
       context: context,
@@ -458,4 +457,15 @@ class ResultScreen extends StatelessWidget {
       },
     );
   }
+
+  /// 결제 전 잠긴 이름 자리 (실제 이름은 서버에만 있다)
+  static const _lockedPlaceholder = NameSuggestion(
+    name: '○○',
+    hanja: '○○',
+    reading: '',
+    meaning: '결제 후 확인할 수 있어요',
+    ohengMatch: '',
+    score: 0,
+    pronunciation: '',
+  );
 }

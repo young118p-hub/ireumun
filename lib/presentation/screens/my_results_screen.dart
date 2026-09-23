@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/saved_result.dart';
 import '../providers/naming_provider.dart';
+import 'diagnosis_result_screen.dart';
+import 'result_screen.dart';
 
 class MyResultsScreen extends StatelessWidget {
   const MyResultsScreen({super.key});
@@ -116,7 +118,7 @@ class MyResultsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              _formatDate(result.savedAt),
+              '${_formatDate(result.savedAt)} · ${result.isPaid ? '전체 보기' : '미리보기'}',
               style: const TextStyle(fontSize: 11, color: Color(0xFFB0B0B0)),
             ),
           ],
@@ -152,12 +154,15 @@ class MyResultsScreen extends StatelessWidget {
     );
   }
 
+  /// 저장된 결과 열기. 결제한 결과는 기기에 전체가 있어서 오프라인에서도 열린다.
   void _viewResult(BuildContext context, SavedResult result, NamingProvider provider) {
-    // TODO: 저장된 결과 상세 보기 (결과 화면으로 이동)
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${result.displayTitle} - 상세 보기 기능 준비 중'),
-        backgroundColor: const Color(0xFF1A1A2E),
+    provider.openSaved(result);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => result.type == SavedResultType.naming
+            ? const ResultScreen()
+            : const DiagnosisResultScreen(),
       ),
     );
   }

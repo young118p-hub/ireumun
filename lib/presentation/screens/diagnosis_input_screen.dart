@@ -663,6 +663,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
     // 미결제 결과가 있으면 차단 → 결과 화면으로 보냄
     if (provider.hasUnpaidDiagnosis) {
       if (!mounted) return;
+      provider.openUnpaidDiagnosis();
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const DiagnosisResultScreen()),

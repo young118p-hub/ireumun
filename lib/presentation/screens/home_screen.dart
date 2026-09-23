@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../data/services/purchase_service.dart';
 import '../providers/naming_provider.dart';
 import 'naming_input_screen.dart';
 import 'diagnosis_input_screen.dart';
@@ -13,6 +14,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<NamingProvider>();
+    String price(ProductType t) => provider.product(t).priceString;
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F0),
       body: SafeArea(
@@ -73,7 +76,7 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.auto_awesome,
                 title: '신규 작명',
                 subtitle: '본인 + 가족 사주 기반\n사주에 맞는 이름을 찾아드려요',
-                price: '₩11,900',
+                price: price(ProductType.naming),
                 color: const Color(0xFF1A1A2E),
                 features: const [
                   '가족 오행 균형 종합 분석',
@@ -95,7 +98,7 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.search,
                 title: '이름 진단',
                 subtitle: '현재 이름의 사주 궁합을\n정밀 분석해드려요',
-                price: '₩4,900',
+                price: price(ProductType.diagnosis),
                 color: const Color(0xFF0984E3),
                 features: const [
                   '현재 이름 오행 적합도',
@@ -147,7 +150,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '작명 + 진단 동시 이용 시 ₩1,900 할인',
+                              '작명 + 진단 함께 결제 시 ${Prices.format(provider.purchaseService.bundleDiscount)} 할인',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.white.withValues(alpha: 0.7),
@@ -162,9 +165,9 @@ class HomeScreen extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          '₩14,900',
-                          style: TextStyle(
+                        child: Text(
+                          price(ProductType.bundle),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,

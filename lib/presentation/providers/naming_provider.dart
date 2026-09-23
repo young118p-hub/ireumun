@@ -1,28 +1,37 @@
 // 작명/진단 상태 관리 Provider
-// B 방식: API 먼저 호출 → 1개 공개 → 결제 후 전체 공개
-// 미결제 결과 캐싱으로 악용 방지
+// 흐름: 서버가 AI로 결과를 만들어 저장 → 앱은 미리보기(첫 이름 / 점수·한 줄 요약)만 받음
+//      → 결제(서버 영수증 검증) 뒤에 전체를 받아 기기에 저장 → '내 결과'에서 언제든 다시 보기
+// 무료 체험·미리보기 한도는 서버가 기기 단위로 관리한다 (재설치해도 유지).
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/saju_input.dart';
 import '../../data/models/naming_result.dart';
 import '../../data/models/diagnosis_result.dart';
 import '../../data/models/saved_result.dart';
-import '../../data/services/claude_service.dart';
+import '../../data/services/api_service.dart';
 import '../../data/services/purchase_service.dart';
 import '../../data/services/result_storage_service.dart';
 
 enum AppState { idle, loading, success, error }
 
 class NamingProvider extends ChangeNotifier {
+  static const _freeTrialKey = 'free_trial_available';
+
   final PurchaseService purchaseService;
   final ResultStorageService storageService;
+  final Api api;
+
+  /// 화면 어디서든 띄우는 안내 (결제 완료·취소 등). main에서 스낵바로 연결.
+  void Function(String message)? onNotice;
 
   NamingProvider({
     required this.purchaseService,
     required this.storageService,
+    required this.api,
   }) {
-    purchaseService.onStateUpdated = () => notifyListeners();
-    purchaseService.onPurchaseCompleted = _onPurchaseCompleted;
+    purchaseService.onDelivered = _onDelivered;
+    purchaseService.onEvent = _onPurchaseEvent;
     _loadCachedResults();
   }
 
@@ -35,309 +44,282 @@ class NamingProvider extends ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  // 작명 결과
-  NamingResult? _namingResult;
-  NamingResult? get namingResult => _namingResult;
-  FamilyNamingInput? _lastFamilyInput;
-  FamilyNamingInput? get lastFamilyInput => _lastFamilyInput;
-  SajuInput? _lastSimpleInput;
-  SajuInput? get lastSimpleInput => _lastSimpleInput;
+  /// 지금 보고 있는 작명 / 진단 결과
+  SavedResult? _naming;
+  SavedResult? _diagnosis;
 
-  // 진단 결과
-  DiagnosisResult? _diagnosisResult;
-  DiagnosisResult? get diagnosisResult => _diagnosisResult;
-  DiagnosisInput? _lastDiagnosisInput;
-  DiagnosisInput? get lastDiagnosisInput => _lastDiagnosisInput;
+  NamingResult? get namingResult => _naming?.namingResult;
+  FamilyNamingInput? get lastFamilyInput => _naming?.familyInput;
+  SajuInput? get lastSimpleInput => _naming?.simpleInput;
+  String get namingSurname => _naming?.surname ?? '';
+  bool get isNamingPaid => _naming?.isPaid ?? false;
+  bool get isFreeTrial => _naming?.isFreeTrial ?? false;
+  int get lockedNamingCount => _naming?.lockedCount ?? 0;
 
-  // 결제 상태
-  bool _isNamingPaid = false;
-  bool get isNamingPaid => _isNamingPaid;
+  DiagnosisResult? get diagnosisResult => _diagnosis?.diagnosisResult;
+  DiagnosisInput? get lastDiagnosisInput => _diagnosis?.diagnosisInput;
+  String get diagnosisSurname => _diagnosis?.surname ?? '';
+  bool get isDiagnosisPaid => _diagnosis?.isPaid ?? false;
+  int get lockedDiagnosisCount => _diagnosis?.lockedCount ?? 0;
+  bool get hasDiagnosisUpgrade => _diagnosis?.hasDiagnosisUpgrade ?? false;
 
-  bool _isDiagnosisPaid = false;
-  bool get isDiagnosisPaid => _isDiagnosisPaid;
+  // 무료 체험 (서버 기준, 기기에는 마지막으로 받은 값만 캐시)
+  bool _freeTrialAvailable = true;
+  bool get isFreeAvailable => _freeTrialAvailable;
 
-  // 무료 체험
-  bool get isFreeAvailable => purchaseService.isFreeAvailable;
-  bool _isFreeTrial = false;
-  bool get isFreeTrial => _isFreeTrial;
+  /// 오늘 남은 무료 미리보기 (모르면 null)
+  int? _previewsLeft;
+  int? get previewsLeft => _previewsLeft;
+
+  // 결제 진행 중 (버튼 중복 탭 방지)
+  bool _purchaseBusy = false;
+  bool get purchaseBusy => _purchaseBusy;
+  String? _purchaseStatus;
+  String? get purchaseStatus => _purchaseStatus;
 
   // 저장 결과
   List<SavedResult> get savedResults => storageService.getAll();
 
-  // ============================================================
-  // 미결제 결과 캐시 로드 (앱 시작 시)
-  // ============================================================
-  void _loadCachedResults() {
-    // 미결제 작명 결과가 있으면 복원
-    final unpaidNaming = storageService.getUnpaid(SavedResultType.naming);
-    if (unpaidNaming != null) {
-      _namingResult = unpaidNaming.namingResult;
-      _lastFamilyInput = unpaidNaming.familyInput;
-      _lastSimpleInput = unpaidNaming.simpleInput;
-      _isNamingPaid = false;
-    }
+  bool get hasUnpaidNaming =>
+      storageService.getUnpaid(SavedResultType.naming) != null;
+  bool get hasUnpaidDiagnosis =>
+      storageService.getUnpaid(SavedResultType.diagnosis) != null;
 
-    // 미결제 진단 결과가 있으면 복원
-    final unpaidDiagnosis = storageService.getUnpaid(SavedResultType.diagnosis);
-    if (unpaidDiagnosis != null) {
-      _diagnosisResult = unpaidDiagnosis.diagnosisResult;
-      _lastDiagnosisInput = unpaidDiagnosis.diagnosisInput;
-      _isDiagnosisPaid = false;
+  PlanProduct product(ProductType type) => purchaseService.getProduct(type);
+
+  // ============================================================
+  // 시작
+  // ============================================================
+
+  /// 미결제 결과가 있으면 이어서 보여준다 (껐다 켜도 같은 결과)
+  void _loadCachedResults() {
+    _naming = storageService.getUnpaid(SavedResultType.naming);
+    _diagnosis = storageService.getUnpaid(SavedResultType.diagnosis);
+  }
+
+  /// 앱 시작 시: 로그인 → 서버 상태 동기화 → 덜 끝난 결제 이어받기.
+  /// 오프라인이면 조용히 넘어간다 (기기에 저장된 결과는 그대로 볼 수 있음).
+  Future<void> start() async {
+    final prefs = await SharedPreferences.getInstance();
+    _freeTrialAvailable = prefs.getBool(_freeTrialKey) ?? true;
+    notifyListeners();
+
+    try {
+      await api.ensureSignedIn();
+      final me = await api.me();
+      _freeTrialAvailable = me.freeTrialAvailable;
+      _previewsLeft = me.previewsLeft;
+      await prefs.setBool(_freeTrialKey, me.freeTrialAvailable);
+      for (final r in me.results) {
+        if (storageService.isHidden(r.id)) continue;
+        await _store(r);
+      }
+      notifyListeners();
+      await purchaseService.recoverUnfinished();
+    } catch (_) {
+      // 오프라인 등: 다음 요청 때 다시 시도
     }
   }
 
   // ============================================================
-  // 미결제 결과 존재 여부 (새 요청 차단용)
-  // ============================================================
-  bool get hasUnpaidNaming => storageService.hasUnpaid(SavedResultType.naming);
-  bool get hasUnpaidDiagnosis => storageService.hasUnpaid(SavedResultType.diagnosis);
-
-  // ============================================================
-  // 신규 작명 (가족 사주 기반)
-  // B 방식: 먼저 API 호출 → 미결제로 저장 → 결제 후 전체 공개
+  // 작명 / 진단 생성 (무료 미리보기)
   // ============================================================
 
-  /// 무료 체험 작명 (단일 입력, 1회만)
+  /// 무료 체험 작명 (본인 사주, 기기당 1회)
   Future<void> generateFreeNames(SajuInput input) async {
     if (!isFreeAvailable) {
       _setError('무료 체험은 1회만 가능합니다.');
+      notifyListeners();
       return;
     }
-
-    // 이전 미결제 결과가 있으면 자동 삭제
-    if (hasUnpaidNaming) {
-      await discardUnpaidNaming();
-    }
-
-    _setLoading();
-
-    try {
-      _namingResult = await ClaudeService.generateNames(input);
-      _lastSimpleInput = input;
-      _lastFamilyInput = null;
-      _isFreeTrial = true;
-      _isNamingPaid = false;
-      await purchaseService.useFreeTrial();
-
-      // 미결제 상태로 저장 (껐다 켜도 같은 결과)
-      await _saveUnpaidNaming();
-
-      _state = AppState.success;
-    } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
-    }
-
-    notifyListeners();
+    await _generateNaming(ApiRequests.simpleNaming(input), simpleInput: input);
   }
 
-  /// 유료 작명 - 본인 사주만 (부모 미포함)
-  Future<void> generatePaidSimpleNames(SajuInput input) async {
-    if (hasUnpaidNaming) {
-      await discardUnpaidNaming();
-    }
+  /// 작명 - 본인 사주만 (부모 미포함)
+  Future<void> generatePaidSimpleNames(SajuInput input) =>
+      _generateNaming(ApiRequests.simpleNaming(input), simpleInput: input);
+
+  /// 작명 - 가족 사주 (아기 + 아빠 + 엄마)
+  Future<void> generateFamilyNames(FamilyNamingInput input) =>
+      _generateNaming(ApiRequests.familyNaming(input), familyInput: input);
+
+  Future<void> _generateNaming(
+    Map<String, dynamic> body, {
+    SajuInput? simpleInput,
+    FamilyNamingInput? familyInput,
+  }) async {
+    if (hasUnpaidNaming) await discardUnpaidNaming();
     _setLoading();
-    _lastSimpleInput = input;
-    _lastFamilyInput = null;
     try {
-      _namingResult = await ClaudeService.generateNames(input);
-      _isFreeTrial = false;
-      _isNamingPaid = false;
+      final remote = await api.generate(body);
+      final saved =
+          remote.toSaved(simpleInput: simpleInput, familyInput: familyInput);
+      await storageService.save(saved);
+      _naming = saved;
+      await _markFreeTrialUsed();
       _state = AppState.success;
-      await _saveUnpaidNaming();
-    } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+    } on ApiException catch (e) {
+      if (e.code == 'quota_exceeded') _previewsLeft = 0;
+      _setError(e.message);
     }
     notifyListeners();
   }
 
-  /// 유료 작명 - API 먼저 호출 (결제는 결과 화면에서)
-  Future<void> generateFamilyNames(FamilyNamingInput input) async {
-    if (hasUnpaidNaming) {
-      await discardUnpaidNaming();
-    }
-
-    _setLoading();
-    _lastFamilyInput = input;
-    _lastSimpleInput = null;
-
-    try {
-      _namingResult = await ClaudeService.generateFamilyNames(
-        familyInput: input,
-        nameCount: 5,
-      );
-      _isFreeTrial = false;
-      _isNamingPaid = false;
-      _state = AppState.success;
-
-      // 미결제 상태로 저장
-      await _saveUnpaidNaming();
-    } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
-    }
-
-    notifyListeners();
-  }
-
-  // ============================================================
-  // 이름 진단
-  // ============================================================
-
-  /// 이름 진단 - API 먼저 호출
+  /// 이름 진단
   Future<void> diagnoseName(DiagnosisInput input) async {
     if (hasUnpaidDiagnosis) {
       _setError('이전 진단 결과가 미결제 상태입니다. 결제 후 새로운 진단이 가능합니다.');
+      notifyListeners();
       return;
     }
-
     _setLoading();
-    _lastDiagnosisInput = input;
-
     try {
-      _diagnosisResult = await ClaudeService.diagnoseName(input: input);
-      _isDiagnosisPaid = false;
+      final remote = await api.generate(ApiRequests.diagnosis(input));
+      final saved = remote.toSaved(diagnosisInput: input);
+      await storageService.save(saved);
+      _diagnosis = saved;
       _state = AppState.success;
-
-      // 미결제 상태로 저장
-      await _saveUnpaidDiagnosis(input);
-    } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
+    } on ApiException catch (e) {
+      if (e.code == 'quota_exceeded') _previewsLeft = 0;
+      _setError(e.message);
     }
-
     notifyListeners();
   }
 
-  /// 진단 후 업그레이드 (추가 개선 이름 5개)
-  Future<void> upgradeFromDiagnosis() async {
-    if (_diagnosisResult == null || _lastDiagnosisInput == null) return;
-
-    _setLoading();
-
-    try {
-      final additionalNames = await ClaudeService.generateImprovementNames(
-        input: _lastDiagnosisInput!,
-        previousResult: _diagnosisResult!,
-        nameCount: 5,
-      );
-
-      _diagnosisResult = DiagnosisResult(
-        saju: _diagnosisResult!.saju,
-        diagnosis: _diagnosisResult!.diagnosis,
-        improvementNames: [
-          ..._diagnosisResult!.improvementNames,
-          ...additionalNames,
-        ],
-      );
-
-      _state = AppState.success;
-    } catch (e) {
-      _setError(e.toString().replaceFirst('Exception: ', ''));
-    }
-
-    notifyListeners();
+  Future<void> _markFreeTrialUsed() async {
+    if (!_freeTrialAvailable) return;
+    _freeTrialAvailable = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_freeTrialKey, false);
   }
 
   // ============================================================
-  // 결제 흐름 (결과 화면에서 호출)
+  // 결제
   // ============================================================
 
-  /// 결제 시작
-  Future<bool> purchaseProduct(ProductType type) async {
-    final product = purchaseService.getProduct(type);
-    return await purchaseService.purchase(product);
-  }
-
-  void _onPurchaseCompleted(ProductType type) {
+  /// 이 상품으로 지금 풀어줄 결과 (없으면 빈 목록 → 결제 불가)
+  List<String> purchaseTargets(ProductType type) {
     switch (type) {
       case ProductType.naming:
-        _unlockNaming();
-        break;
+        // 보고 있는 결과가 결제 전이면 그것, 아니면 가장 최근의 결제 전 결과
+        final n = _naming != null && !_naming!.isPaid
+            ? _naming
+            : storageService.getUnpaid(SavedResultType.naming);
+        return n != null ? [n.id] : const [];
       case ProductType.diagnosis:
-        _unlockDiagnosis();
-        break;
+        final d = _diagnosis != null && !_diagnosis!.isPaid
+            ? _diagnosis
+            : storageService.getUnpaid(SavedResultType.diagnosis);
+        return d != null ? [d.id] : const [];
       case ProductType.bundle:
-        _unlockNaming();
-        _unlockDiagnosis();
-        break;
+        // 결제 전인 작명·진단 결과가 둘 다 있어야 한다
+        final n = storageService.getUnpaid(SavedResultType.naming);
+        final d = storageService.getUnpaid(SavedResultType.diagnosis);
+        return n != null && d != null ? [n.id, d.id] : const [];
       case ProductType.diagnosisUpgrade:
-        break;
+        final d = _diagnosis;
+        return d != null && d.isPaid && !d.hasDiagnosisUpgrade
+            ? [d.id]
+            : const [];
+    }
+  }
+
+  bool canPurchase(ProductType type) => purchaseTargets(type).isNotEmpty;
+
+  /// 결제 시작. 결과는 _onDelivered로 오고, 안내는 onNotice로 뜬다.
+  Future<void> purchase(ProductType type) async {
+    if (_purchaseBusy) return;
+    final targets = purchaseTargets(type);
+    if (targets.isEmpty) {
+      onNotice?.call(type == ProductType.bundle
+          ? '묶음 할인은 결제 전인 작명 결과와 진단 결과가 하나씩 있을 때 쓸 수 있어요.'
+          : '결제할 결과가 없어요. 먼저 결과를 받아 주세요.');
+      return;
+    }
+    _purchaseBusy = true;
+    _purchaseStatus = null;
+    notifyListeners();
+    try {
+      await purchaseService.buy(type, targets);
+    } on ApiException catch (e) {
+      _purchaseBusy = false;
+      onNotice?.call(e.message);
+    } on PurchaseFlowException catch (e) {
+      _purchaseBusy = false;
+      onNotice?.call(e.message);
     }
     notifyListeners();
   }
 
-  /// 작명 결과 전체 공개
-  Future<void> _unlockNaming() async {
-    _isNamingPaid = true;
-    final unpaid = storageService.getUnpaid(SavedResultType.naming);
-    if (unpaid != null) {
-      await storageService.markAsPaid(unpaid.id);
+  /// 검증된 결제 결과를 기기에 저장 (이게 끝나야 구매가 소비된다)
+  Future<void> _onDelivered(ProductType type, List<RemoteResult> results) async {
+    for (final r in results) {
+      await _store(r);
     }
+    notifyListeners();
   }
 
-  /// 진단 결과 전체 공개
-  Future<void> _unlockDiagnosis() async {
-    _isDiagnosisPaid = true;
-    final unpaid = storageService.getUnpaid(SavedResultType.diagnosis);
-    if (unpaid != null) {
-      await storageService.markAsPaid(unpaid.id);
+  /// 서버 결과를 기기에 반영 (기기에만 있는 입력 원본은 유지)
+  Future<void> _store(RemoteResult r) async {
+    final local = storageService.getById(r.id);
+    final saved = local != null ? r.applyTo(local) : r.toSaved();
+    await storageService.save(saved);
+    if (_naming?.id == r.id) _naming = saved;
+    if (_diagnosis?.id == r.id) _diagnosis = saved;
+  }
+
+  void _onPurchaseEvent(PurchaseEvent e) {
+    switch (e.kind) {
+      case PurchaseEventKind.verifying:
+        _purchaseBusy = true;
+        _purchaseStatus = e.message;
+        break;
+      case PurchaseEventKind.pending:
+      case PurchaseEventKind.delivered:
+      case PurchaseEventKind.canceled:
+      case PurchaseEventKind.failed:
+        _purchaseBusy = false;
+        _purchaseStatus = null;
+        onNotice?.call(e.message);
+        break;
     }
-  }
-
-  // ============================================================
-  // 미결제 결과 저장
-  // ============================================================
-
-  Future<void> _saveUnpaidNaming() async {
-    if (_namingResult == null) return;
-
-    final saved = SavedResult(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: SavedResultType.naming,
-      savedAt: DateTime.now(),
-      isPaid: false,
-      familyInput: _lastFamilyInput,
-      simpleInput: _lastSimpleInput,
-      namingResult: _namingResult,
-    );
-
-    await storageService.save(saved);
-  }
-
-  Future<void> _saveUnpaidDiagnosis(DiagnosisInput input) async {
-    if (_diagnosisResult == null) return;
-
-    final saved = SavedResult(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: SavedResultType.diagnosis,
-      savedAt: DateTime.now(),
-      isPaid: false,
-      diagnosisInput: input,
-      diagnosisResult: _diagnosisResult,
-    );
-
-    await storageService.save(saved);
+    notifyListeners();
   }
 
   // ============================================================
   // 결과 관리
   // ============================================================
 
+  /// '내 결과'에서 고른 결과 열기
+  void openSaved(SavedResult result) {
+    final fresh = storageService.getById(result.id) ?? result;
+    if (fresh.type == SavedResultType.naming) {
+      _naming = fresh;
+    } else {
+      _diagnosis = fresh;
+    }
+    notifyListeners();
+  }
+
+  /// 결제 전인 진단 결과로 돌아가기 (새 진단 전에 먼저 결제하거나 버려야 함)
+  void openUnpaidDiagnosis() {
+    _diagnosis = storageService.getUnpaid(SavedResultType.diagnosis);
+    notifyListeners();
+  }
+
   /// 저장 결과 삭제
   Future<void> deleteSavedResult(String id) async {
     await storageService.delete(id);
+    if (_naming?.id == id) _naming = null;
+    if (_diagnosis?.id == id) _diagnosis = null;
     notifyListeners();
   }
 
   /// 미결제 작명 결과 버리고 새로 시작
   Future<void> discardUnpaidNaming() async {
     final unpaid = storageService.getUnpaid(SavedResultType.naming);
-    if (unpaid != null) {
-      await storageService.delete(unpaid.id);
-    }
-    _namingResult = null;
-    _lastFamilyInput = null;
-    _lastSimpleInput = null;
-    _isNamingPaid = false;
-    _isFreeTrial = false;
+    if (unpaid != null) await storageService.delete(unpaid.id);
+    _naming = null;
     _state = AppState.idle;
     notifyListeners();
   }
@@ -345,12 +327,8 @@ class NamingProvider extends ChangeNotifier {
   /// 미결제 진단 결과 버리고 새로 시작
   Future<void> discardUnpaidDiagnosis() async {
     final unpaid = storageService.getUnpaid(SavedResultType.diagnosis);
-    if (unpaid != null) {
-      await storageService.delete(unpaid.id);
-    }
-    _diagnosisResult = null;
-    _lastDiagnosisInput = null;
-    _isDiagnosisPaid = false;
+    if (unpaid != null) await storageService.delete(unpaid.id);
+    _diagnosis = null;
     _state = AppState.idle;
     notifyListeners();
   }
@@ -373,14 +351,8 @@ class NamingProvider extends ChangeNotifier {
   /// 상태 초기화 (새로운 세션)
   void reset() {
     _state = AppState.idle;
-    _namingResult = null;
-    _diagnosisResult = null;
-    _lastFamilyInput = null;
-    _lastSimpleInput = null;
-    _lastDiagnosisInput = null;
-    _isNamingPaid = false;
-    _isDiagnosisPaid = false;
-    _isFreeTrial = false;
+    _naming = null;
+    _diagnosis = null;
     _errorMessage = '';
     notifyListeners();
   }

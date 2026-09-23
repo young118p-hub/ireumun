@@ -52,3 +52,7 @@ app.*.map.json
 /web/
 /windows/
 .flutter-plugins
+
+# 빌드 설정 (env/example.json만 커밋)
+/env/*.json
+!/env/example.json

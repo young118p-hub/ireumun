@@ -1,7 +1,7 @@
 // 이름 진단 결과 화면
 // B 방식: 종합 점수 + 1줄 요약 무료 공개
 // 상세 분석 + 개선 이름은 결제 후 공개
-// 업셀링: 추가 개선 이름 5개 (₩9,900)
+// 업셀링: 추가 개선 이름 5개 (가격은 PurchaseService의 Prices)
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -33,8 +33,7 @@ class DiagnosisResultScreen extends StatelessWidget {
           }
 
           final diagnosis = result.diagnosis;
-          final input = provider.lastDiagnosisInput;
-          final surname = input?.person.surname ?? '';
+          final surname = provider.diagnosisSurname;
           final isPaid = provider.isDiagnosisPaid;
 
           return SingleChildScrollView(
@@ -82,7 +81,7 @@ class DiagnosisResultScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // 업셀링 배너 (추가 이름 5개)
-                  if (result.improvementNames.length <= 3)
+                  if (!provider.hasDiagnosisUpgrade)
                     _buildUpsellBanner(context, provider),
                 ] else ...[
                   // 미결제: 블러 처리 + 결제 유도
@@ -351,26 +350,20 @@ class DiagnosisResultScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final success = await provider.purchaseProduct(ProductType.diagnosis);
-                    if (!success && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('결제가 취소되었습니다.'),
-                          backgroundColor: Color(0xFF8E8E93),
-                        ),
-                      );
-                    }
-                  },
+                  // 결제 결과(완료·취소)는 provider가 안내를 띄운다
+                  onPressed: provider.purchaseBusy
+                      ? null
+                      : () => provider.purchase(ProductType.diagnosis),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF0984E3),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    '₩4,900 결제하고 전체 보기',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  child: Text(
+                    provider.purchaseStatus ??
+                        '${provider.product(ProductType.diagnosis).priceString} 결제하고 전체 보기',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -541,19 +534,21 @@ class DiagnosisResultScreen extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () async {
-                final purchased = await provider.purchaseProduct(ProductType.diagnosisUpgrade);
-                if (purchased) {
-                  await provider.upgradeFromDiagnosis();
-                }
-              },
+              // 추가 이름은 결제가 검증된 뒤에 서버가 만들어 보내준다
+              onPressed: provider.purchaseBusy
+                  ? null
+                  : () => provider.purchase(ProductType.diagnosisUpgrade),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF0984E3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text('₩9,900 - 개선 이름 5개 추가', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              child: Text(
+                provider.purchaseStatus ??
+                    '${provider.product(ProductType.diagnosisUpgrade).priceString} - 개선 이름 5개 추가',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],

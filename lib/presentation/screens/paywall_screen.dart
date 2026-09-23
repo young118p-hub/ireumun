@@ -1,6 +1,6 @@
-// 결제 화면
-// 3티어: 작명(₩11,900) / 진단(₩4,900) / 묶음(₩14,900)
-// + 진단 업셀링(₩9,900)
+// 결제 화면 (이용권 안내)
+// 작명 / 진단 / 묶음. 가격은 PurchaseService의 Prices 한 곳에서만.
+// 받아 둔 결과가 있어야 결제할 수 있다 (결과 없이 결제되면 풀어줄 게 없어서 돈만 나감)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +17,6 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  bool _isProcessing = false;
   late ProductType _selectedType;
 
   @override
@@ -74,7 +73,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _isProcessing ? null : () => _onPurchase(provider),
+                    onPressed: provider.purchaseBusy || !provider.canPurchase(_selectedType)
+                        ? null
+                        : () => provider.purchase(_selectedType),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A1A2E),
                       foregroundColor: Colors.white,
@@ -84,7 +85,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                       elevation: 2,
                     ),
-                    child: _isProcessing
+                    child: provider.purchaseBusy
                         ? const SizedBox(
                             width: 22,
                             height: 22,
@@ -99,6 +100,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ),
                   ),
                 ),
+
+                // 지금 결제할 수 없는 이유
+                if (!provider.canPurchase(_selectedType)) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _selectedType == ProductType.bundle
+                        ? '묶음 할인은 결제 전인 작명 결과와 진단 결과가 하나씩 있을 때 쓸 수 있어요.'
+                        : '먼저 ${_selectedType == ProductType.naming ? '작명' : '진단'}을 받아 보세요. 결과를 본 뒤에 결제할 수 있어요.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93), height: 1.5),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 
@@ -201,9 +214,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
-                                '₩1,900 할인',
-                                style: TextStyle(
+                              child: Text(
+                                '${Prices.format(context.read<NamingProvider>().purchaseService.bundleDiscount)} 할인',
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFFFF6B6B),
@@ -254,34 +267,5 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _onPurchase(NamingProvider provider) async {
-    setState(() => _isProcessing = true);
-
-    try {
-      final success = await provider.purchaseProduct(_selectedType);
-      if (!mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('구매가 완료되었습니다!'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('구매 실패: $e'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
   }
 }
