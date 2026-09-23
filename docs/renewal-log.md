@@ -43,3 +43,13 @@
 ### 테스트
 - 서버: `cd supabase && deno test -A tests/` — 핸들러 17 · Play 서명 3 · SQL(PGlite) 6
 - 앱: `flutter test` — 사주 48(경계 8 + 회귀 40) · 결제 순서 11 · 결과 보관 6 · 기본 1
+
+## 배포 — 새 서버 (2026-09-23)
+
+| 무엇 | 왜 |
+|---|---|
+| 개인 조직 `chemi-lab`에 새 서버 `voziptrocdxlengcazof`(서울) 생성, 마이그레이션 적용, `naming`·`purchase`·`me` 배포 | 옛 서버 `sgckoxdvsskhiskstgmu`는 API가 "Resource has been removed"로 응답(무료 요금제 장기 미사용 삭제 추정). 회사(LOFII) 조직과 완전히 분리 |
+| 옛 `API_SECRET`은 새 서버에 아예 등록하지 않음 | 옛 서버가 사라져서 지울 곳이 없음. 새 서버엔 공용 키 인증 자체가 없음 |
+| `env/dev.json`에 새 URL·publishable key (커밋 안 함) | DB 비밀번호는 `~/.config/chemi-lab/db-password` (저장소 밖) |
+| 익명 로그인 켬(대시보드), `CLAUDE_API_KEY` 등록 → 실서버 확인: 익명 가입 → `naming` 200(약 25초, 이름 1개만·잠김 4개) → `me`에서 미리보기 3→2, 무료 체험 소진 | 배포가 실제로 도는지 끝까지 확인 |
+| 남은 것: `GOOGLE_PLAY_SERVICE_ACCOUNT`(개인사업자 등록 후), Play 상품 4개 등록, 실기기 확인 | Play 계정이 없는 동안 영수증 검증은 전부 거절됨(실패 시 닫힘) |
