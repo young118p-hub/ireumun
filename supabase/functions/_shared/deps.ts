@@ -19,7 +19,16 @@ export function productionDeps() {
   const db = serviceClient();
   const deps: Deps = {
     repo: new SupabaseRepo(db),
-    llm: claudeLlm(Deno.env.get("CLAUDE_API_KEY") ?? ""),
+    llm: claudeLlm(Deno.env.get("CLAUDE_API_KEY") ?? "", fetch, async (u) => {
+      const { error } = await db.from("ai_usage").insert({
+        label: u.label,
+        model: u.model,
+        input_tokens: u.inputTokens,
+        output_tokens: u.outputTokens,
+        stop_reason: u.stopReason,
+      });
+      if (error) throw error;
+    }),
     play: googlePlayVerifier(Deno.env.get("GOOGLE_PLAY_SERVICE_ACCOUNT"), Deno.env.get("ANDROID_PACKAGE_NAME")),
     previewLimit: Number(Deno.env.get("PREVIEW_DAILY_LIMIT") ?? DEFAULT_PREVIEW_LIMIT) || DEFAULT_PREVIEW_LIMIT,
   };

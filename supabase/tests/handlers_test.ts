@@ -19,11 +19,13 @@ const DEVICE = "a1b2c3d4e5f60718";
 function setup(opts: { llm?: (p: string) => Promise<string>; purchases?: Record<string, PlayPurchase> } = {}) {
   const repo = new MemoryRepo();
   const llmCalls: string[] = [];
+  const llmLabels: (string | undefined)[] = [];
   const deps: Deps = {
     repo,
     previewLimit: 3,
-    llm: opts.llm ?? (async (prompt) => {
+    llm: opts.llm ?? (async (prompt, label) => {
       llmCalls.push(prompt);
+      llmLabels.push(label);
       if (prompt.includes("이름이 사주와 얼마나 잘 맞는지")) {
         return JSON.stringify({
           diagnosis: {
@@ -42,7 +44,7 @@ function setup(opts: { llm?: (p: string) => Promise<string>; purchases?: Record<
       return p;
     },
   };
-  return { repo, deps, llmCalls };
+  return { repo, deps, llmCalls, llmLabels };
 }
 
 const simple = (over: Record<string, unknown> = {}) => ({
@@ -75,6 +77,13 @@ Deno.test("앱이 보낸 nameCount는 무시하고 서버가 5개로 고정", as
   const { deps, llmCalls } = setup();
   await handleGenerate(deps, USER, simple({ nameCount: 50 }));
   assert(llmCalls[0].includes("이름 5개"));
+});
+
+Deno.test("토큰 기록용: AI 호출마다 요청 종류가 붙는다 (무료 미리보기 비용을 따로 보려고)", async () => {
+  const { deps, llmLabels } = setup();
+  await handleGenerate(deps, USER, simple());
+  await handleGenerate(deps, USER, diagnosis());
+  assertEquals(llmLabels, ["naming_simple", "diagnosis"]);
 });
 
 Deno.test("무료 체험: 기기당 한 번. 재설치(새 익명 계정)해도 다시 생기지 않는다", async () => {

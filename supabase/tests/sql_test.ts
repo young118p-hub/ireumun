@@ -2,7 +2,7 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@1";
 import { PGlite } from "npm:@electric-sql/pglite@0.3";
 
-const MIGRATION = new URL("../migrations/20260923000000_results_purchases.sql", import.meta.url);
+const MIGRATIONS = new URL("../migrations/", import.meta.url);
 const U1 = "11111111-1111-1111-1111-111111111111";
 const U2 = "22222222-2222-2222-2222-222222222222";
 const DEV = "a1b2c3d4e5f60718";
@@ -18,7 +18,9 @@ async function db() {
     alter default privileges in schema public grant all on tables to anon, authenticated;
     grant all on schema public to anon, authenticated;
   `);
-  await pg.exec(await Deno.readTextFile(MIGRATION));
+  // 파일 이름(날짜) 순서대로 전부 적용 — 실제 db push와 같게
+  const files = [...Deno.readDirSync(MIGRATIONS)].map((e) => e.name).filter((n) => n.endsWith(".sql")).sort();
+  for (const f of files) await pg.exec(await Deno.readTextFile(new URL(f, MIGRATIONS)));
   return pg;
 }
 
@@ -92,6 +94,26 @@ Deno.test("앱 역할(anon/authenticated)은 테이블·함수에 직접 못 들
     }
     await assertRejects(() => pg.query(`select * from claim_preview('${DEV}', '${U1}', 99)`), Error, "permission denied");
     await assertRejects(() => pg.query(`select use_free_trial('${DEV}')`), Error, "permission denied");
+    await pg.exec("reset role");
+  }
+});
+
+Deno.test("ai_usage: 기록이 날짜·요청별로 합산되고, 앱(anon·authenticated)은 못 읽는다", async () => {
+  const pg = await db();
+  await pg.exec(`
+    insert into ai_usage (label, model, input_tokens, output_tokens) values
+      ('naming_simple', 'm', 1500, 3000), ('naming_simple', 'm', 1500, 2000), ('diagnosis', 'm', 1200, 2500);
+  `);
+  const rows = (await pg.query<{ label: string; calls: number; output_tokens: number }>(
+    "select label, calls::int, output_tokens::int from ai_usage_daily order by label")).rows;
+  assertEquals(rows, [
+    { label: "diagnosis", calls: 1, output_tokens: 2500 },
+    { label: "naming_simple", calls: 2, output_tokens: 5000 },
+  ]);
+  for (const role of ["anon", "authenticated"]) {
+    await pg.exec(`set role ${role}`);
+    await assertRejects(() => pg.query("select * from ai_usage"));
+    await assertRejects(() => pg.query("select * from ai_usage_daily"));
     await pg.exec("reset role");
   }
 });

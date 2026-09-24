@@ -144,13 +144,14 @@ export async function handleGenerate(deps: Deps, user: AuthUser, body: Record<st
         deps.llm,
         buildDiagnosisPrompt(input),
         (j: any) => typeof j.diagnosis === "object" && j.diagnosis !== null && typeof j.diagnosis.overallScore === "number",
+        type,
       );
       content = { saju: input.saju, diagnosis: json.diagnosis, improvementNames: json.improvementNames ?? [] };
     } else {
       const prompt = type === "naming"
         ? buildNamingPrompt({ ...input, nameCount: NAMING_COUNT })
         : buildNamingSimplePrompt({ ...input, nameCount: NAMING_COUNT });
-      const json = await generateJson(deps.llm, prompt, (j: any) => validNames(j.names));
+      const json = await generateJson(deps.llm, prompt, (j: any) => validNames(j.names), type);
       content = {
         babySaju: type === "naming" ? input.babySaju : input.saju,
         fatherSaju: input.fatherSaju ?? null,
@@ -302,7 +303,7 @@ async function generateUpgrade(deps: Deps, row: ResultRow) {
     birthInfo: input.birthInfo,
     previousDiagnosis: row.content.diagnosis,
   });
-  const json = await generateJson(deps.llm, prompt, (j: any) => validNames(j.names));
+  const json = await generateJson(deps.llm, prompt, (j: any) => validNames(j.names), "diagnosis_upgrade");
   await deps.repo.updateContent(row.id, {
     ...row.content,
     improvementNames: [...(row.content.improvementNames ?? []), ...(json.names as unknown[])],

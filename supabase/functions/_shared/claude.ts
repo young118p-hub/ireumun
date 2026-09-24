@@ -5,10 +5,24 @@ import { ApiError } from "./http.ts";
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 
-export type Llm = (prompt: string) => Promise<string>;
+/** label: 어떤 요청인지 (naming / naming_simple / diagnosis / diagnosis_upgrade) — 토큰 기록용 */
+export type Llm = (prompt: string, label?: string) => Promise<string>;
 
-export function claudeLlm(apiKey: string, fetchFn: typeof fetch = fetch): Llm {
-  return async (prompt) => {
+/** AI 호출 1번의 토큰 사용량. 무료 미리보기에 드는 비용을 실제 숫자로 보려고 남긴다 */
+export interface AiUsage {
+  label: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  stopReason: string | null;
+}
+
+export function claudeLlm(
+  apiKey: string,
+  fetchFn: typeof fetch = fetch,
+  onUsage?: (usage: AiUsage) => Promise<void>,
+): Llm {
+  return async (prompt, label = "unknown") => {
     const response = await fetchFn(CLAUDE_API_URL, {
       method: "POST",
       headers: {
@@ -28,6 +42,16 @@ export function claudeLlm(apiKey: string, fetchFn: typeof fetch = fetch): Llm {
       throw new Error(`Claude API error: ${err?.error?.message || response.status}`);
     }
     const data = await response.json();
+    if (onUsage) {
+      // 기록 실패가 사용자 요청을 막으면 안 된다
+      await onUsage({
+        label,
+        model: data.model ?? CLAUDE_MODEL,
+        inputTokens: data.usage?.input_tokens ?? 0,
+        outputTokens: data.usage?.output_tokens ?? 0,
+        stopReason: data.stop_reason ?? null,
+      }).catch((e) => console.error("ai usage log failed:", e));
+    }
     return data.content[0].text;
   };
 }
@@ -52,12 +76,13 @@ export async function generateJson(
   llm: Llm,
   prompt: string,
   isValid: (json: Record<string, unknown>) => boolean,
+  label: string,
   attempts = 2,
 ): Promise<Record<string, unknown>> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
-      const json = parseJsonText(await llm(prompt));
+      const json = parseJsonText(await llm(prompt, label));
       if (isValid(json)) return json;
       last = new Error("invalid AI response shape");
     } catch (e) {
