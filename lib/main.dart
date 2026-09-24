@@ -1,4 +1,4 @@
-// 이름운 - AI 사주 작명 앱
+// 케미연구소 - AI 사주 작명 앱
 // 진입점 & Provider 설정 + Hive·Supabase 초기화 + 탭 네비게이션
 
 import 'package:flutter/material.dart';
@@ -55,7 +55,7 @@ void main() async {
         ..showSnackBar(SnackBar(content: Text(message)));
     };
 
-  runApp(IreumunApp(provider: provider));
+  runApp(ChemiLabApp(provider: provider));
 
   // 로그인·동기화·덜 끝난 결제 이어받기 (화면은 먼저 띄운다)
   provider.start();
@@ -83,10 +83,10 @@ class _MissingConfigApp extends StatelessWidget {
   }
 }
 
-class IreumunApp extends StatelessWidget {
+class ChemiLabApp extends StatelessWidget {
   final NamingProvider provider;
 
-  const IreumunApp({super.key, required this.provider});
+  const ChemiLabApp({super.key, required this.provider});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +94,7 @@ class IreumunApp extends StatelessWidget {
       value: provider,
       child: MaterialApp(
         scaffoldMessengerKey: scaffoldMessengerKey,
-        title: '이름운',
+        title: '케미연구소',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(

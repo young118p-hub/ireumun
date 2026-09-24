@@ -48,7 +48,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 const SizedBox(height: 12),
 
                 const Text(
-                  '이름운 이용권',
+                  '케미연구소 이용권',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,

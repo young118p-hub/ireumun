@@ -4,7 +4,7 @@
 //   아래 표는 수정 전 코드로 뽑은 값이다.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ireumun/data/services/saju_calculator.dart';
+import 'package:chemilab/data/services/saju_calculator.dart';
 
 String pillars(SajuResult r) => '${r.yearPillar} ${r.monthPillar} ${r.dayPillar} ${r.hourPillar}';
 

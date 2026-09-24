@@ -4,12 +4,12 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:ireumun/data/models/saju_input.dart';
-import 'package:ireumun/data/models/saved_result.dart';
-import 'package:ireumun/data/services/api_service.dart';
-import 'package:ireumun/data/services/purchase_service.dart';
-import 'package:ireumun/data/services/result_storage_service.dart';
-import 'package:ireumun/presentation/providers/naming_provider.dart';
+import 'package:chemilab/data/models/saju_input.dart';
+import 'package:chemilab/data/models/saved_result.dart';
+import 'package:chemilab/data/services/api_service.dart';
+import 'package:chemilab/data/services/purchase_service.dart';
+import 'package:chemilab/data/services/result_storage_service.dart';
+import 'package:chemilab/presentation/providers/naming_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:in_app_purchase/in_app_purchase.dart' show PurchaseStatus;
@@ -132,7 +132,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    dir = await Directory.systemTemp.createTemp('ireumun_test');
+    dir = await Directory.systemTemp.createTemp('chemilab_test');
     Hive.init(dir.path);
     api = ServerApi();
     provider = await launch();

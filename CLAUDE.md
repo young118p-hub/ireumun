@@ -1,11 +1,11 @@
-# 이름운 - AI 사주 작명 앱 (→ "케미연구소"로 리브랜딩 예정, 미출시)
+# 케미연구소 (구 이름운) - AI 사주 작명·궁합 앱 (미출시)
 
 ## Stack
 - Flutter 3.38 / Dart 3.10, Provider (상태관리), Hive (기기 저장)
 - Supabase: 익명 계정 인증 + Edge Functions(`naming` / `purchase` / `me`) + Postgres
 - Claude API는 Edge Function에서만 호출 (앱에 키 없음)
 - in_app_purchase (소모성, `autoConsume: false`)
-- Package: com.ireumun.ireumun (리브랜딩 때 변경 예정)
+- Package: com.chemilab.chemilab (Dart 패키지 `chemilab`). 저장소 폴더명·GitHub 저장소는 아직 ireumun
 
 ## Build & Run
 ```bash
@@ -14,7 +14,7 @@ flutter run --dart-define-from-file=env/dev.json
 flutter test
 cd supabase && deno test -A tests/
 ```
-- `android/`는 커밋하지 않음 → 필요하면 `flutter create --platforms=android --org com.ireumun --project-name ireumun .` 후 `.metadata`·`README.md` 변경은 되돌릴 것
+- `android/`는 커밋하지 않음 → 필요하면 `flutter create --platforms=android --org com.chemilab --project-name chemilab .` 후 `.metadata`·`README.md` 변경은 되돌리고, `AndroidManifest.xml`의 `android:label`을 "케미연구소"로
 - 서버 배포·secrets: `supabase/README.md`
 
 ## 구조

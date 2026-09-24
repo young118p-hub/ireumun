@@ -27,7 +27,7 @@ class HomeScreen extends StatelessWidget {
 
               // 앱 타이틀
               const Text(
-                '이름운',
+                '케미연구소',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,

@@ -53,3 +53,13 @@
 | `env/dev.json`에 새 URL·publishable key (커밋 안 함) | DB 비밀번호는 `~/.config/chemi-lab/db-password` (저장소 밖) |
 | 익명 로그인 켬(대시보드), `CLAUDE_API_KEY` 등록 → 실서버 확인: 익명 가입 → `naming` 200(약 25초, 이름 1개만·잠김 4개) → `me`에서 미리보기 3→2, 무료 체험 소진 | 배포가 실제로 도는지 끝까지 확인 |
 | 남은 것: `GOOGLE_PLAY_SERVICE_ACCOUNT`(개인사업자 등록 후), Play 상품 4개 등록, 실기기 확인 | Play 계정이 없는 동안 영수증 검증은 전부 거절됨(실패 시 닫힘) |
+
+## 2단계 — 이름 변경: 이름운 → 케미연구소 (2026-09-23)
+
+| 무엇 | 왜 |
+|---|---|
+| 화면·공유 문구·공유 카드·결제 화면의 "이름운"을 "케미연구소"로 | 궁합·가족 케미·이름 궁합·MBTI를 넣으면서 작명만의 이름이 아니게 됨 |
+| 패키지명 `com.ireumun.ireumun` → `com.chemilab.chemilab`, Dart 패키지 `ireumun` → `chemilab` | 미출시라 지금이 바꿀 수 있는 마지막 때(출시 후엔 못 바꿈). 기존 규칙(`--org` + 프로젝트명)대로라 `flutter create`로 android/를 다시 만들어도 같은 값 |
+| 서버 `ANDROID_PACKAGE_NAME`도 `com.chemilab.chemilab` | 영수증 검증 때 패키지명을 대조함. 앱과 다르면 전부 거절 |
+| `android/`는 커밋 안 하는 폴더라 로컬에서 직접 바꿈: `applicationId`·`namespace`, `MainActivity` 위치, 런처 이름 `android:label` | CLAUDE.md의 `flutter create` 안내도 새 값으로 |
+| 그대로 둔 것: 저장소 폴더명·GitHub 저장소 이름(ireumun), Hive 박스 이름 | 사용자에게 안 보이고, 박스 이름을 바꾸면 기기 저장 결과를 못 읽음 |

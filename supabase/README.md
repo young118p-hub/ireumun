@@ -15,7 +15,7 @@ supabase login
 supabase link --project-ref <project-ref>
 supabase db push                                   # migrations 적용
 supabase secrets set CLAUDE_API_KEY=...            # Anthropic
-supabase secrets set ANDROID_PACKAGE_NAME=com.ireumun.ireumun
+supabase secrets set ANDROID_PACKAGE_NAME=com.chemilab.chemilab
 supabase secrets set GOOGLE_PLAY_SERVICE_ACCOUNT="$(cat service-account.json)"
 supabase secrets unset API_SECRET                  # 예전 공용 키 폐기
 supabase functions deploy naming purchase me

@@ -38,7 +38,7 @@ class ShareCardWidget extends StatelessWidget {
           children: [
             // 앱 로고
             const Text(
-              '이름운',
+              '케미연구소',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -161,7 +161,7 @@ class ShareCardWidget extends StatelessWidget {
 
             // 하단 브랜딩
             Text(
-              'play.google.com/store/apps/details?id=com.ireumun.ireumun',
+              'play.google.com/store/apps/details?id=com.chemilab.chemilab',
               style: TextStyle(
                 fontSize: 8,
                 color: Colors.white.withValues(alpha: 0.4),

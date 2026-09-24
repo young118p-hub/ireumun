@@ -4,9 +4,9 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:ireumun/data/models/saved_result.dart';
-import 'package:ireumun/data/services/api_service.dart';
-import 'package:ireumun/data/services/purchase_service.dart';
+import 'package:chemilab/data/models/saved_result.dart';
+import 'package:chemilab/data/services/api_service.dart';
+import 'package:chemilab/data/services/purchase_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeBilling implements BillingGateway {
