@@ -28,12 +28,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
       appBar: AppBar(
         title: const Text('이용권 선택'),
-        backgroundColor: const Color(0xFF1A1A2E),
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: Consumer<NamingProvider>(
         builder: (context, provider, _) {

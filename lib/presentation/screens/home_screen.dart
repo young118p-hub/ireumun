@@ -1,307 +1,342 @@
-// 홈 화면 - 작명 / 진단 2가지 메뉴 카드
-// 무료 체험 배너 + 서비스 선택
+// 홈 (시안 K: 핑크 상단 + 크롬 하단)
+// 누르는 곳마다 어디로 가는지는 docs/screen-map.md. 요약:
+// - "내 이름 케미부터" → 이름 진단 입력 / MBTI 유형 → MBTI 고르기(나 선택됨)
+// - 결과 카드: 기록이 있으면 내 결과(실제 점수), 없으면 "예시" 카드 → 그 검사 시작
+// - 아직 없는 기능은 "곧 열려요"로 눌리지 않음 (core/config/features.dart)
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../data/services/purchase_service.dart';
+import '../../core/config/features.dart';
+import '../../core/theme/chemi_theme.dart';
+import '../../data/mbti/mbti_chemi.dart';
+import '../feed.dart';
+import '../providers/chemi_provider.dart';
 import '../providers/naming_provider.dart';
-import 'naming_input_screen.dart';
+import '../widgets/beaker.dart';
+import '../widgets/feed_card.dart';
 import 'diagnosis_input_screen.dart';
-import 'paywall_screen.dart';
+import 'mbti_pick_screen.dart';
+import 'naming_input_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  /// 내 결과 탭으로 (카드 "전체 보기")
+  final VoidCallback onOpenAllResults;
+
+  const HomeScreen({super.key, required this.onOpenAllResults});
+
+  static const _feedLimit = 5;
+
+  void _push(BuildContext context, Widget screen) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<NamingProvider>();
-    String price(ProductType t) => provider.product(t).priceString;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              const SizedBox(height: 32),
+    final chemi = context.watch<ChemiProvider>();
+    final feed = buildFeed(context.watch<NamingProvider>(), chemi);
 
-              // 앱 타이틀
-              const Text(
-                '케미연구소',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '사주 기반 이름 분석',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF8E8E93),
-                  letterSpacing: 1,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 무료 체험 배너
-              Consumer<NamingProvider>(
-                builder: (context, provider, _) {
-                  if (!provider.isFreeAvailable) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      '무료 체험 1회 가능',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF4CAF50),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 40),
-
-              // 신규 작명 카드
-              _ServiceCard(
-                icon: Icons.auto_awesome,
-                title: '신규 작명',
-                subtitle: '본인 + 가족 사주 기반\n사주에 맞는 이름을 찾아드려요',
-                price: price(ProductType.naming),
-                color: const Color(0xFF1A1A2E),
-                features: const [
-                  '가족 오행 균형 종합 분석',
-                  '사주 맞춤 이름 5개 추천',
-                  '한자 뜻풀이 & 발음 평가',
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        body: ListView(
+          padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 100),
+          children: [
+            _Hero(
+              myMbti: chemi.myMbti,
+              onNameChemi: () => _push(context, const DiagnosisInputScreen()),
+              onMbti: (type) => _push(context, MbtiPickScreen(initialMe: type)),
+            ),
+            _SectionTitle(
+              title: feed.isEmpty ? '이런 결과가 나와요' : '내 실험 기록',
+              action: feed.isEmpty ? null : (label: '전체 보기', onTap: onOpenAllResults),
+            ),
+            SizedBox(
+              height: FeedCard.height,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                children: [
+                  if (feed.isEmpty) ...[
+                    _exampleMbti(context),
+                    const SizedBox(width: 10),
+                    _exampleNameChemi(context),
+                  ] else
+                    for (final (i, item) in feed.take(_feedLimit).indexed) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      FeedCard(item: item, onTap: () => item.open(context)),
+                    ],
                 ],
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NamingInputScreen()),
-                  );
-                },
               ),
-
-              const SizedBox(height: 16),
-
-              // 이름 진단 카드
-              _ServiceCard(
-                icon: Icons.search,
-                title: '이름 진단',
-                subtitle: '현재 이름의 사주 궁합을\n정밀 분석해드려요',
-                price: price(ProductType.diagnosis),
-                color: const Color(0xFF0984E3),
-                features: const [
-                  '현재 이름 오행 적합도',
-                  '문제점 & 장점 리포트',
-                  '개선 이름 3개 추천',
-                ],
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const DiagnosisInputScreen()),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              // 묶음 할인 배너
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                  );
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1A1A2E), Color(0xFF3A3A5C)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _MenuTile(title: '우리 케미', enabled: Features.pairChemi, onTap: () {})),
+                      const SizedBox(width: 8),
+                      Expanded(child: _MenuTile(title: '가족 케미', enabled: Features.familyChemi, onTap: () {})),
+                    ],
                   ),
-                  child: Row(
+                  const SizedBox(height: 8),
+                  Row(
                     children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '묶음 할인',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '작명 + 진단 함께 결제 시 ${Prices.format(provider.purchaseService.bundleDiscount)} 할인',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: _MenuTile(title: '이름 케미', badge: '무료', enabled: Features.nameChemi, onTap: () {}),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          price(ProductType.bundle),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _MenuTile(
+                          title: '아기 이름 찾기',
+                          outlined: true,
+                          enabled: true,
+                          onTap: () => _push(context, const NamingInputScreen()),
                         ),
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 기록이 없을 때만: 실제 규칙표 점수를 쓰고, 누르면 같은 조합으로 시작
+  Widget _exampleMbti(BuildContext context) {
+    final c = mbtiChemi('INFP', 'ENTJ');
+    return FeedCard.example(
+      label: 'MBTI 케미',
+      headline: '${c.me} × ${c.you}',
+      score: c.score,
+      summary: c.title,
+      kind: FeedKind.mbti,
+      onTap: () => _push(context, const MbtiPickScreen(initialMe: 'INFP', initialYou: 'ENTJ')),
+    );
+  }
+
+  /// 내 이름 케미는 해 보기 전엔 점수를 모르니 숫자 대신 물음표
+  Widget _exampleNameChemi(BuildContext context) => FeedCard.example(
+        label: '내 이름 케미',
+        headline: '내 사주 × 내 이름',
+        score: null,
+        summary: '몇 점일지 측정해 보기',
+        kind: FeedKind.nameChemi,
+        onTap: () => _push(context, const DiagnosisInputScreen()),
+      );
+}
+
+class _Hero extends StatelessWidget {
+  final String? myMbti;
+  final VoidCallback onNameChemi;
+  final ValueChanged<String?> onMbti;
+
+  const _Hero({required this.myMbti, required this.onNameChemi, required this.onMbti});
+
+  /// MBTI 판에 바로 보이는 3개: 내 유형이 있으면 맨 앞
+  List<String> get _quickTypes =>
+      {?myMbti, 'INFP', 'ENFP', 'INTJ', 'ENTJ'}.take(3).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return Container(
+      padding: EdgeInsets.fromLTRB(22, top + 16, 22, 20),
+      decoration: const BoxDecoration(
+        color: ChemiColors.pink,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('케미연구소', style: ChemiText.display(28, height: 1)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('너랑 나,\n케미 몇 점?', style: ChemiText.display(38)),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: onNameChemi,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text('내 이름 케미부터', style: ChemiText.label(14, color: Colors.white)),
+                    ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 32),
+              const Beaker(width: 118),
             ],
           ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(22)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('MBTI 케미 · 무료', style: ChemiText.display(18, color: Colors.white)),
+                    const Spacer(),
+                    Text(myMbti == null ? '내 유형은?' : '내 유형 $myMbti',
+                        style: ChemiText.label(12, color: ChemiColors.mutedOnInk)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    for (final t in _quickTypes) ...[
+                      Expanded(
+                        child: _MbtiCell(
+                          text: t,
+                          highlighted: t == myMbti,
+                          onTap: () => onMbti(t),
+                          semantics: '$t로 MBTI 케미 시작',
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: _MbtiCell(
+                        text: '+${mbtiTypes.length - 3}',
+                        outlined: true,
+                        onTap: () => onMbti(null),
+                        semantics: '다른 유형 고르기',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MbtiCell extends StatelessWidget {
+  final String text;
+  final bool highlighted;
+  final bool outlined;
+  final VoidCallback onTap;
+  final String semantics;
+
+  const _MbtiCell({
+    required this.text,
+    required this.onTap,
+    required this.semantics,
+    this.highlighted = false,
+    this.outlined = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = highlighted ? Colors.white : (outlined ? Colors.transparent : ChemiColors.inkSoft);
+    final fg = highlighted ? ChemiColors.ink : (outlined ? ChemiColors.mutedOnInk : Colors.white);
+    return Semantics(
+      button: true,
+      label: semantics,
+      excludeSemantics: true,
+      child: Material(
+        color: bg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: outlined ? const BorderSide(color: ChemiColors.inkLine) : BorderSide.none,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: SizedBox(height: 44, child: Center(child: Text(text, style: ChemiText.label(13, color: fg)))),
         ),
       ),
     );
   }
 }
 
-/// 서비스 선택 카드 (작명 / 진단)
-class _ServiceCard extends StatelessWidget {
-  final IconData icon;
+class _SectionTitle extends StatelessWidget {
   final String title;
-  final String subtitle;
-  final String price;
-  final Color color;
-  final List<String> features;
+  final ({String label, VoidCallback onTap})? action;
+  const _SectionTitle({required this.title, this.action});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(22, 18, 12, 6),
+        child: Row(
+          children: [
+            Text(title, style: ChemiText.display(20)),
+            const Spacer(),
+            if (action != null)
+              TextButton(
+                onPressed: action!.onTap,
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: Text(action!.label, style: ChemiText.label(13, color: ChemiColors.muted)),
+              ),
+          ],
+        ),
+      );
+}
+
+class _MenuTile extends StatelessWidget {
+  final String title;
+  final String? badge;
+  final bool enabled;
+  final bool outlined;
   final VoidCallback onTap;
 
-  const _ServiceCard({
-    required this.icon,
+  const _MenuTile({
     required this.title,
-    required this.subtitle,
-    required this.price,
-    required this.color,
-    required this.features,
+    required this.enabled,
     required this.onTap,
+    this.badge,
+    this.outlined = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: outlined ? const BorderSide(color: ChemiColors.disabled, width: 1.5) : BorderSide.none,
+    );
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: enabled ? title : '$title, 곧 열려요',
+      excludeSemantics: true,
+      child: Material(
+        color: outlined ? Colors.transparent : (enabled ? Colors.white : Colors.white.withValues(alpha: 0.5)),
+        shape: shape,
+        child: InkWell(
+          customBorder: shape,
+          onTap: enabled ? onTap : null,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
+                Flexible(
+                  child: Text(title,
+                      overflow: TextOverflow.ellipsis,
+                      style: ChemiText.label(14, color: enabled ? ChemiColors.ink : ChemiColors.muted)),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        price,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: color.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios, size: 16, color: color.withValues(alpha: 0.4)),
+                const SizedBox(width: 6),
+                if (!enabled)
+                  Text('곧 열려요', style: ChemiText.label(11, color: ChemiColors.muted))
+                else if (badge != null)
+                  Text(badge!, style: ChemiText.label(13, color: ChemiColors.pinkDeep)),
               ],
             ),
-
-            const SizedBox(height: 14),
-
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF666666),
-                height: 1.5,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-            const Divider(height: 1, color: Color(0xFFF0EDE8)),
-            const SizedBox(height: 12),
-
-            // 기능 목록
-            ...features.map((f) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_outline, size: 16, color: color.withValues(alpha: 0.5)),
-                  const SizedBox(width: 8),
-                  Text(
-                    f,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF888888),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
+          ),
         ),
       ),
     );

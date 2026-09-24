@@ -42,12 +42,8 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
       appBar: AppBar(
-        title: const Text('신규 작명'),
-        backgroundColor: const Color(0xFF1A1A2E),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('아기 이름 찾기'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

@@ -19,12 +19,8 @@ class ResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
       appBar: AppBar(
-        title: const Text('작명 결과'),
-        backgroundColor: const Color(0xFF1A1A2E),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('아기 이름 결과'),
         actions: [
           Consumer<NamingProvider>(
             builder: (context, provider, _) {

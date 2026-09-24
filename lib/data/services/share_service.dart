@@ -43,8 +43,11 @@ class ShareService {
     }
   }
 
-  /// 이미지를 카카오톡 등으로 공유
-  static Future<void> shareImage(Uint8List imageBytes) async {
+  /// 이미지를 카카오톡 등으로 공유. 공유 창을 못 열면 false (부르는 쪽에서 안내)
+  static Future<bool> shareImage(
+    Uint8List imageBytes, {
+    String text = '케미연구소 앱에서 추천받은 이름이에요 ✨',
+  }) async {
     try {
       final dir = await getTemporaryDirectory();
       final file = File(
@@ -54,10 +57,11 @@ class ShareService {
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: '케미연구소 앱에서 추천받은 이름이에요 ✨',
+        text: text,
       );
+      return true;
     } catch (e) {
-      // 공유 실패 시 무시
+      return false;
     }
   }
 
