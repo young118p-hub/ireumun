@@ -213,3 +213,40 @@ void openStoryShare(BuildContext context, {required Widget card, required String
     builder: (_) => StoryShareSheet(card: card, shareText: shareText),
   );
 }
+
+/// "생일까지 넣으면 진짜 케미" → 우리 케미 입력 (MBTI·이름 케미 결과 아래)
+class PairChemiLink extends StatelessWidget {
+  final String lead; // "MBTI는 성격, 사주는 타고난 기운"
+  final VoidCallback onTap;
+  const PairChemiLink({super.key, required this.lead, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: ChemiColors.ink,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Beaker(width: 48, liquid: ChemiColors.pink, line: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(lead, style: ChemiText.label(12, color: ChemiColors.pink)),
+                      const SizedBox(height: 2),
+                      Text('생일까지 넣으면\n진짜 케미가 나와요', style: ChemiText.display(18, color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
+      );
+}

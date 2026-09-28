@@ -13,7 +13,9 @@ import '../widgets/beaker.dart';
 import '../widgets/element_chip.dart';
 import '../widgets/result_parts.dart';
 import '../widgets/status_scrim.dart';
+import '../../core/config/features.dart';
 import 'name_chemi_input_screen.dart';
+import 'pair_chemi_input_screen.dart';
 
 class NameChemiResultScreen extends StatefulWidget {
   final String me;
@@ -157,6 +159,16 @@ class _NameChemiResultScreenState extends State<NameChemiResultScreen> {
                             const SizedBox(height: 18),
                             const SectionTitle('점수 근거', sub: '기본 58점에 더해진 점수'),
                             _Parts(chemi: c),
+                            if (Features.pairChemi) ...[
+                              const SizedBox(height: 18),
+                              PairChemiLink(
+                                lead: '이름은 소리, 사주는 타고난 기운',
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const PairChemiInputScreen()),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,

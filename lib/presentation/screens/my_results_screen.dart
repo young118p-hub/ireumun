@@ -86,6 +86,7 @@ class _ResultRow extends StatelessWidget {
   Color get _dot => switch (item.kind) {
         FeedKind.mbti => ChemiColors.pink,
         FeedKind.nameMatch => const Color(0xFFFFD1E7),
+        FeedKind.pair => ChemiColors.pink,
         FeedKind.nameChemi => Colors.white,
         FeedKind.babyName => ChemiColors.ink,
       };

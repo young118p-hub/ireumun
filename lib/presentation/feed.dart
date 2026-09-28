@@ -5,15 +5,17 @@
 import 'package:flutter/material.dart';
 import '../data/mbti/mbti_history.dart';
 import '../data/name_chemi/name_chemi_history.dart';
+import '../data/pair_chemi/pair_chemi_history.dart';
 import '../data/models/saved_result.dart';
 import 'providers/chemi_provider.dart';
 import 'providers/naming_provider.dart';
 import 'screens/diagnosis_result_screen.dart';
 import 'screens/mbti_result_screen.dart';
 import 'screens/name_chemi_result_screen.dart';
+import 'screens/pair_chemi_result_screen.dart';
 import 'screens/result_screen.dart';
 
-enum FeedKind { mbti, nameMatch, nameChemi, babyName }
+enum FeedKind { mbti, nameMatch, pair, nameChemi, babyName }
 
 class FeedItem {
   final String id;
@@ -45,6 +47,7 @@ List<FeedItem> buildFeed(NamingProvider naming, ChemiProvider chemi) {
   final items = <FeedItem>[
     for (final r in chemi.mbtiRecords) _fromMbti(r, chemi),
     for (final r in chemi.nameRecords) _fromName(r, chemi),
+    for (final r in chemi.pairRecords) _fromPair(r, chemi),
     for (final r in naming.savedResults) _fromSaved(r, naming),
   ];
   items.sort((a, b) => b.at.compareTo(a.at));
@@ -86,6 +89,25 @@ FeedItem _fromName(NameChemiRecord r, ChemiProvider chemi) {
       MaterialPageRoute(builder: (_) => NameChemiResultScreen(me: r.a, you: r.b, record: false)),
     ),
     delete: () => chemi.deleteName(r.id),
+  );
+}
+
+FeedItem _fromPair(PairChemiRecord r, ChemiProvider chemi) {
+  final c = r.chemi;
+  return FeedItem(
+    id: r.id,
+    kind: FeedKind.pair,
+    label: '우리 케미 · ${r.relation.label}',
+    headline: '${r.a.name} × ${r.b.name}',
+    score: c.score,
+    summary: c.title,
+    at: r.at,
+    isPreview: !r.paid,
+    open: (context) => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PairChemiResultScreen(me: r.a, you: r.b, relation: r.relation, record: false)),
+    ),
+    delete: () => chemi.deletePair(r.id),
   );
 }
 

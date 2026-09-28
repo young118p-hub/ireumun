@@ -11,7 +11,9 @@ import '../../data/mbti/mbti_chemi.dart';
 import '../providers/chemi_provider.dart';
 import '../../core/text/keep_words.dart';
 import '../widgets/beaker.dart';
+import '../../core/config/features.dart';
 import '../widgets/result_parts.dart';
+import 'pair_chemi_input_screen.dart';
 import '../widgets/status_scrim.dart';
 import 'mbti_pick_screen.dart';
 
@@ -47,8 +49,9 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
     if (widget.record) {
       // 첫 프레임 뒤에 (build 중 notifyListeners 방지)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted)
+        if (mounted) {
           context.read<ChemiProvider>().recordMbti(widget.me, widget.you);
+        }
       });
     }
   }
@@ -230,6 +233,16 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
                               dark: false,
                             ),
                             const SizedBox(height: 18),
+                            if (Features.pairChemi) ...[
+                              PairChemiLink(
+                                lead: 'MBTI는 성격, 사주는 타고난 기운',
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const PairChemiInputScreen()),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                            ],
                             SectionTitle(
                               '${c.me}의 최고 케미 TOP 3',
                               sub: '누르면 그 조합으로 볼 수 있어요',

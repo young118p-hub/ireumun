@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chemilab/core/theme/chemi_theme.dart';
 import 'package:chemilab/data/mbti/mbti_history.dart';
 import 'package:chemilab/data/name_chemi/name_chemi_history.dart';
+import 'package:chemilab/data/pair_chemi/pair_chemi_history.dart';
 import 'package:chemilab/presentation/providers/chemi_provider.dart';
 import 'package:chemilab/presentation/screens/name_chemi_input_screen.dart';
 import 'package:chemilab/presentation/screens/name_chemi_result_screen.dart';
@@ -31,7 +32,7 @@ Future<void> _loadFonts() async {
 Future<ChemiProvider> _provider() async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  return ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs));
+  return ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs));
 }
 
 Widget _app(ChemiProvider chemi, Widget home) => ChangeNotifierProvider.value(

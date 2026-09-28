@@ -23,6 +23,22 @@ Map<String, dynamic> _names(int n) => {
       'names': List.generate(n, (i) => {'name': '이름$i', 'hanja': '漢字', 'score': 90}),
     };
 
+const pairReport = {
+  'report': {
+    'goodPoints': [
+      {'title': '좋1', 'body': 'b'},
+      {'title': '좋2', 'body': 'b'},
+      {'title': '좋3', 'body': 'b'},
+    ],
+    'clashPoints': [
+      {'title': '충1', 'body': 'b'},
+      {'title': '충2', 'body': 'b'},
+    ],
+    'yearFlow': '흐름',
+    'advice': ['a', 'b', 'c'],
+  },
+};
+
 class ServerApi implements Api {
   final results = <String, RemoteResult>{};
   var seq = 0;
@@ -30,6 +46,20 @@ class ServerApi implements Api {
 
   RemoteResult _view(RemoteResult full) => full.unlocked
       ? full
+      : full.kindName != 'naming' && full.kindName != 'diagnosis'
+          ? RemoteResult(
+              id: full.id,
+              kind: null,
+              kindName: full.kindName,
+              requestType: full.requestType,
+              input: full.input,
+              isFreeTrial: false,
+              paidProducts: full.paidProducts,
+              unlocked: false,
+              lockedCount: 4,
+              createdAt: full.createdAt,
+              content: const {},
+            )
       : RemoteResult(
           id: full.id,
           kind: full.kind,
@@ -65,6 +95,23 @@ class ServerApi implements Api {
   @override
   Future<RemoteResult> generate(Map<String, dynamic> body) async {
     await ensureSignedIn();
+    if (body['type'] == 'pair') {
+      final r = RemoteResult(
+        id: 'p${seq++}',
+        kind: null,
+        kindName: 'pair',
+        requestType: 'pair',
+        input: {'relation': body['relation'], 'people': body['people']},
+        isFreeTrial: false,
+        paidProducts: const [],
+        unlocked: false,
+        lockedCount: 4,
+        createdAt: DateTime(2026, 9, 28, 12, seq),
+        content: const {},
+      );
+      results[r.id] = r;
+      return _view(r);
+    }
     final isNaming = body['type'] != 'diagnosis';
     final r = RemoteResult(
       id: 'r${seq++}',
@@ -102,6 +149,7 @@ class ServerApi implements Api {
         results[id] = RemoteResult(
           id: id,
           kind: results[id]!.kind,
+          kindName: results[id]!.kindName,
           requestType: results[id]!.requestType,
           input: results[id]!.input,
           isFreeTrial: results[id]!.isFreeTrial,
@@ -109,7 +157,7 @@ class ServerApi implements Api {
           unlocked: true,
           lockedCount: 0,
           createdAt: results[id]!.createdAt,
-          content: results[id]!.content,
+          content: results[id]!.isPair ? pairReport : results[id]!.content,
         ),
     ];
   }

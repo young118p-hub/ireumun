@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/saju_input.dart';
 import '../models/saved_result.dart';
+import '../pair_chemi/pair_chemi.dart';
+import '../pair_chemi/pair_chemi_history.dart';
 import 'device_id_service.dart';
 import 'saju_calculator.dart';
 
@@ -25,7 +27,9 @@ class ApiException implements Exception {
 /// 서버가 돌려주는 결과 한 건
 class RemoteResult {
   final String id;
-  final SavedResultType kind;
+  /// 작명·진단일 때만. 우리 케미 등 다른 종류는 null (kindName으로 구분)
+  final SavedResultType? kind;
+  final String kindName;
   final String requestType;
   final Map<String, dynamic> input;
   final bool isFreeTrial;
@@ -38,6 +42,7 @@ class RemoteResult {
   const RemoteResult({
     required this.id,
     required this.kind,
+    String? kindName,
     required this.requestType,
     required this.input,
     required this.isFreeTrial,
@@ -46,11 +51,16 @@ class RemoteResult {
     required this.lockedCount,
     required this.createdAt,
     required this.content,
-  });
+  }) : kindName = kindName ?? (kind == SavedResultType.naming ? 'naming' : 'diagnosis');
 
+  bool get isPair => kindName == 'pair';
+
+  /// 모르는 종류(앞으로 추가될 결과)는 kind가 null → 작명·진단 저장소에 넣지 않고 건너뛴다.
+  /// 예전엔 byName이 예외를 던져서 동기화(me)가 통째로 실패했다.
   factory RemoteResult.fromJson(Map<String, dynamic> json) => RemoteResult(
         id: json['id'] as String,
-        kind: SavedResultType.values.byName(json['kind'] as String),
+        kind: SavedResultType.values.where((t) => t.name == json['kind']).firstOrNull,
+        kindName: json['kind'] as String? ?? '',
         requestType: json['requestType'] as String? ?? '',
         input: Map<String, dynamic>.from(json['input'] as Map? ?? {}),
         isFreeTrial: json['isFreeTrial'] as bool? ?? false,
@@ -234,6 +244,31 @@ class ApiRequests {
       };
 }
 
+/// 우리 케미: 결제할 결과 자리 만들기 (서버는 AI를 부르지 않는다. 무료 점수·해설은 규칙으로 이미 계산)
+Map<String, dynamic> pairRequest(PairChemiRecord record) {
+  final c = record.chemi;
+  Map<String, dynamic> person(PairInput p, PairPerson pp) => {
+        'name': p.name,
+        'birthInfo': '${p.birth.date.year}-${p.birth.date.month.toString().padLeft(2, '0')}-'
+            '${p.birth.date.day.toString().padLeft(2, '0')} ${p.birth.hourKnown ? '${p.birth.hour}시' : '시간 미상'}',
+        'saju': pp.saju.toSajuAnalysisJson(),
+        'birth': {'y': p.birth.date.year, 'm': p.birth.date.month, 'd': p.birth.date.day, 'h': p.birth.hour},
+      };
+  return {
+    'type': 'pair',
+    'relation': record.relation.name,
+    'people': [person(record.a, c.a), person(record.b, c.b)],
+    'rules': {
+      'score': c.score,
+      'title': c.title,
+      'parts': [
+        for (final p in c.parts) {'label': p.label, 'badge': p.badge, 'points': p.points, 'max': p.max, 'text': p.text},
+      ],
+      'tenGods': [for (final g in c.tenGods) {'from': g.from, 'to': g.to, 'name': g.name}],
+    },
+  };
+}
+
 extension RemoteResultToSaved on RemoteResult {
   /// 새로 받은 결과를 기기 저장용으로 (입력 원본은 기기에만 있으므로 같이 넘긴다)
   SavedResult toSaved({
@@ -243,7 +278,7 @@ extension RemoteResultToSaved on RemoteResult {
   }) =>
       SavedResult.fromRemote(
         id: id,
-        type: kind,
+        type: kind!,
         createdAt: createdAt,
         unlocked: unlocked,
         paidProducts: paidProducts,

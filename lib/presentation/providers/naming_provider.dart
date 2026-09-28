@@ -25,6 +25,9 @@ class NamingProvider extends ChangeNotifier {
   /// 화면 어디서든 띄우는 안내 (결제 완료·취소 등). main에서 스낵바로 연결.
   void Function(String message)? onNotice;
 
+  /// 우리 케미 서버 결과 (동기화·결제 완료). 작명·진단 저장소가 아니라 케미 기록이 받는다. main에서 연결.
+  Future<void> Function(RemoteResult result)? onPairResult;
+
   NamingProvider({
     required this.purchaseService,
     required this.storageService,
@@ -111,7 +114,11 @@ class NamingProvider extends ChangeNotifier {
       _previewsLeft = me.previewsLeft;
       await prefs.setBool(_freeTrialKey, me.freeTrialAvailable);
       for (final r in me.results) {
-        if (storageService.isHidden(r.id)) continue;
+        if (r.isPair) {
+          await onPairResult?.call(r);
+          continue;
+        }
+        if (r.kind == null || storageService.isHidden(r.id)) continue; // 모르는 종류는 건너뜀
         await _store(r);
       }
       notifyListeners();
@@ -216,6 +223,8 @@ class NamingProvider extends ChangeNotifier {
         final n = storageService.getUnpaid(SavedResultType.naming);
         final d = storageService.getUnpaid(SavedResultType.diagnosis);
         return n != null && d != null ? [n.id, d.id] : const [];
+      case ProductType.pairChemi:
+        return const []; // 우리 케미는 결과 ID를 직접 넘긴다 (purchaseResults)
       case ProductType.diagnosisUpgrade:
         final d = _diagnosis;
         return d != null && d.isPaid && !d.hasDiagnosisUpgrade
@@ -228,7 +237,6 @@ class NamingProvider extends ChangeNotifier {
 
   /// 결제 시작. 결과는 _onDelivered로 오고, 안내는 onNotice로 뜬다.
   Future<void> purchase(ProductType type) async {
-    if (_purchaseBusy) return;
     final targets = purchaseTargets(type);
     if (targets.isEmpty) {
       onNotice?.call(type == ProductType.bundle
@@ -236,6 +244,12 @@ class NamingProvider extends ChangeNotifier {
           : '결제할 결과가 없어요. 먼저 결과를 받아 주세요.');
       return;
     }
+    await purchaseResults(type, targets);
+  }
+
+  /// 결제할 결과를 직접 정해서 결제 (우리 케미처럼 작명·진단 저장소 밖의 결과)
+  Future<void> purchaseResults(ProductType type, List<String> targets) async {
+    if (_purchaseBusy || targets.isEmpty) return;
     _purchaseBusy = true;
     _purchaseStatus = null;
     notifyListeners();
@@ -254,7 +268,11 @@ class NamingProvider extends ChangeNotifier {
   /// 검증된 결제 결과를 기기에 저장 (이게 끝나야 구매가 소비된다)
   Future<void> _onDelivered(ProductType type, List<RemoteResult> results) async {
     for (final r in results) {
-      await _store(r);
+      if (r.isPair) {
+        await onPairResult?.call(r);
+      } else if (r.kind != null) {
+        await _store(r);
+      }
     }
     notifyListeners();
   }

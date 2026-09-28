@@ -7,6 +7,7 @@
 // 생일까지 넣는 사주 궁합은 '우리 케미'가 따로 맡는다.
 
 import 'package:flutter/widgets.dart';
+import '../../core/text/josa.dart';
 
 const elements = ['목', '화', '토', '금', '수'];
 
@@ -157,7 +158,7 @@ class NameChemi {
   String get direction {
     final pa = personas[a.dominant]!.name, pb = personas[b.dominant]!.name;
     final na = _given(a.name), nb = _given(b.name);
-    if (relation == ElementRelation.same) return '$na${_waGwa(na)} $nb 모두 $pa이에요';
+    if (relation == ElementRelation.same) return '${waGwa(na)} $nb 모두 $pa이에요';
     if (generates(a.dominant, b.dominant)) return '$na의 $pa이 $nb의 $pb을 살려요';
     if (generates(b.dominant, a.dominant)) return '$nb의 $pb이 $na의 $pa을 살려요';
     if (controls(a.dominant, b.dominant)) return '$na의 $pa이 $nb의 $pb을 다듬어요';
@@ -168,13 +169,6 @@ class NameChemi {
         score >= 90 ? '#찰떡케미' : score >= 80 ? '#좋은케미' : '#알아가는케미',
         '#$relationLabel',
       ];
-}
-
-/// 받침이 있으면 '과', 없으면 '와' (민서와, 지훈과)
-String _waGwa(String word) {
-  final c = word.runes.last;
-  final hasFinal = c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 != 0;
-  return hasFinal ? '과' : '와';
 }
 
 /// 성을 뺀 이름 (3글자 이상이면 앞 한 글자를 성으로 본다). 조사가 붙는 자리에 쓴다.

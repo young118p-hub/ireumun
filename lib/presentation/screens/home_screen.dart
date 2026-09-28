@@ -19,6 +19,7 @@ import '../widgets/status_scrim.dart';
 import 'diagnosis_input_screen.dart';
 import 'mbti_pick_screen.dart';
 import 'name_chemi_input_screen.dart';
+import 'pair_chemi_input_screen.dart';
 import 'naming_input_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -100,9 +101,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: _MenuTile(
-                              title: '우리 케미',
-                              enabled: Features.pairChemi,
-                              onTap: () {},
+                            title: '우리 케미',
+                            enabled: Features.pairChemi,
+                            onTap: () => _push(context, const PairChemiInputScreen()),
                             ),
                           ),
                           const SizedBox(width: 8),

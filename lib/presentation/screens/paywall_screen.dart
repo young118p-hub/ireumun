@@ -35,7 +35,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       body: Consumer<NamingProvider>(
         builder: (context, provider, _) {
           final products = provider.purchaseService.products
-              .where((p) => p.type != ProductType.diagnosisUpgrade)
+              .where((p) => const {ProductType.naming, ProductType.diagnosis, ProductType.bundle}.contains(p.type))
               .toList();
 
           return SingleChildScrollView(
