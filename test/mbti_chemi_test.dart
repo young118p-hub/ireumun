@@ -49,6 +49,44 @@ void main() {
     });
   });
 
+  group('MBTI 케미 상세', () {
+    test('케미 해부 네 줄의 점수를 더하면 결과 점수 (점수의 근거가 화면과 맞는다)', () {
+      for (final a in mbtiTypes) {
+        for (final b in mbtiTypes) {
+          final c = mbtiChemi(a, b);
+          expect(40 + c.axes.fold<int>(0, (s, x) => s + x.points), c.score, reason: '$a×$b');
+          expect(c.axes.map((x) => x.label), ['에너지', '대화 코드', '결정 방식', '생활 리듬']);
+          for (final text in [...c.axes.map((x) => x.text), c.love, c.friend, c.work]) {
+            expect(text, isNotEmpty);
+            expect(text.contains('{'), isFalse, reason: '$a×$b: $text');
+          }
+        }
+      }
+    });
+
+    test('16유형 모두 별명·특징·연애 스타일·듣고 싶은 말이 있다', () {
+      for (final t in mbtiTypes) {
+        final p = mbtiProfiles[t]!;
+        expect([p.nick, p.vibe, p.love, p.wantsToHear].every((x) => x.isNotEmpty), isTrue, reason: t);
+      }
+      expect(mbtiProfiles.values.map((p) => p.nick).toSet().length, 16); // 별명 겹치지 않게
+    });
+
+    test('최고 케미 TOP 3: 점수 높은 순, 결과 화면 점수와 같다', () {
+      for (final t in mbtiTypes) {
+        final top = bestMatches(t);
+        expect(top.length, 3);
+        final best = mbtiTypes.map((x) => mbtiChemi(t, x).score).reduce((a, b) => a > b ? a : b);
+        expect(top.first.score, best, reason: t);
+        for (final m in top) {
+          expect(m.score, mbtiChemi(t, m.you).score);
+        }
+        expect(top[0].score >= top[1].score && top[1].score >= top[2].score, isTrue);
+      }
+      expect(bestMatches('INFP').map((m) => m.you), ['ENFJ', 'ENTJ', 'ENFP']);
+    });
+  });
+
   group('MBTI 기록', () {
     late MbtiHistory history;
     setUp(() async {

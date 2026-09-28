@@ -5,6 +5,10 @@
 // - 문구의 "{E}" 같은 자리는 그 글자를 가진 쪽 유형으로 채운다. MBTI는 J/P로 끝나서
 //   뒤에 오는 조사는 늘 모음 뒤 형태(가/는/를/의)다.
 
+import 'mbti_content.dart';
+
+export 'mbti_content.dart' show MbtiProfile, mbtiProfiles;
+
 const mbtiTypes = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
   'INFJ', 'INFP', 'ENFJ', 'ENFP',
@@ -27,6 +31,20 @@ enum _Axis {
   final String b;
 }
 
+/// 케미 해부 한 줄: 이 축에서 몇 점을 받았는지(점수의 근거)와 설명
+class MbtiAxis {
+  final String label; // 에너지, 대화 코드 …
+  final String letters; // "E/I"
+  final int points;
+  final int max;
+  final String text;
+
+  const MbtiAxis({required this.label, required this.letters, required this.points, required this.max, required this.text});
+
+  /// 이 축에서 받을 수 있는 최고점이면 찰떡, 0점이면 노력 필요
+  String get verdict => points == max ? '찰떡' : (points == 0 ? '노력 필요' : '무난');
+}
+
 class MbtiChemi {
   final String me;
   final String you;
@@ -35,6 +53,10 @@ class MbtiChemi {
   final String strength;
   final String clash;
   final String tip;
+  final List<MbtiAxis> axes;
+  final String love;
+  final String friend;
+  final String work;
 
   const MbtiChemi({
     required this.me,
@@ -44,7 +66,14 @@ class MbtiChemi {
     required this.strength,
     required this.clash,
     required this.tip,
+    required this.axes,
+    required this.love,
+    required this.friend,
+    required this.work,
   });
+
+  MbtiProfile get meProfile => mbtiProfiles[me]!;
+  MbtiProfile get youProfile => mbtiProfiles[you]!;
 
   /// 공유 카드용 해시태그 (점수 구간 + 조합 성격)
   List<String> get tags => [
@@ -146,6 +175,21 @@ MbtiChemi mbtiChemi(String me, String you) {
   final strength = _strengths.firstWhere((s) => matches(s.$1, s.$2, s.$3));
   final clash = _clashes.firstWhere((c) => matches(c.$1, c.$2, c.$3));
 
+  // 보여 주는 순서: 에너지 → 대화 → 결정 → 생활 리듬
+  final axes = [
+    for (final a in [_Axis.ei, _Axis.ns, _Axis.tf, _Axis.jp])
+      MbtiAxis(
+        label: axisLabels[a.name]!,
+        letters: '${a.a}/${a.b}',
+        points: same(a) ? _add[a]!.same : _add[a]!.diff,
+        max: [_add[a]!.same, _add[a]!.diff].reduce((x, y) => x > y ? x : y),
+        text: fill(!same(a)
+            ? axisTexts[a.name]!.$3
+            : (me[a.pos] == a.a ? axisTexts[a.name]!.$1 : axisTexts[a.name]!.$2)),
+      ),
+  ];
+  final (love, friend, work) = situations[key]!;
+
   return MbtiChemi(
     me: me,
     you: you,
@@ -154,5 +198,18 @@ MbtiChemi mbtiChemi(String me, String you) {
     strength: fill(strength.$4),
     clash: fill(clash.$4),
     tip: fill(clash.$5),
+    axes: axes,
+    love: love,
+    friend: friend,
+    work: work,
   );
+}
+
+/// 이 유형과 케미 점수가 높은 순서로 n개 (같은 점수면 유형 목록 순서).
+/// 규칙표 점수 그대로라 결과 화면의 점수와 항상 같다.
+List<MbtiChemi> bestMatches(String type, {int n = 3}) {
+  final all = [for (final t in mbtiTypes) mbtiChemi(type, t)];
+  final order = {for (final (i, t) in mbtiTypes.indexed) t: i};
+  all.sort((a, b) => b.score != a.score ? b.score - a.score : order[a.you]! - order[b.you]!);
+  return all.take(n).toList();
 }

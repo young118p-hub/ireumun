@@ -108,6 +108,10 @@ class _MbtiPickScreenState extends State<MbtiPickScreen> {
                     selectedText: ChemiColors.ink,
                     onPick: (t) => setState(() => _me = t),
                   ),
+                  if (_me != null) ...[
+                    const SizedBox(height: 14),
+                    _BestMatches(me: _me!, selected: _you, onPick: (t) => setState(() => _you = t)),
+                  ],
                   const SizedBox(height: 18),
                   Text('상대는', style: ChemiText.display(18)),
                   const SizedBox(height: 8),
@@ -228,4 +232,71 @@ class _Pill extends StatelessWidget {
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(999)),
         child: Text(text, style: ChemiText.label(12, color: color)),
       );
+}
+
+/// "나는"을 고르면 바로: 나와 케미가 가장 높은 3유형. 누르면 상대로 선택된다.
+class _BestMatches extends StatelessWidget {
+  final String me;
+  final String? selected;
+  final ValueChanged<String> onPick;
+
+  const _BestMatches({required this.me, required this.selected, required this.onPick});
+
+  @override
+  Widget build(BuildContext context) {
+    final top = bestMatches(me);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(TextSpan(children: [
+            TextSpan(text: '$me ${mbtiProfiles[me]!.nick}', style: ChemiText.label(12, color: ChemiColors.mutedOnInk)),
+            TextSpan(text: '\n나와 최고 케미 TOP 3', style: ChemiText.display(18, color: Colors.white)),
+          ])),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final (i, m) in top.indexed) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: m.you == selected,
+                    label: '${i + 1}위 ${m.you} ${m.youProfile.nick} ${m.score}점, 상대로 고르기',
+                    excludeSemantics: true,
+                    child: Material(
+                      color: m.you == selected ? ChemiColors.pink : ChemiColors.inkSoft,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => onPick(m.you),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${i + 1}위', style: ChemiText.label(11, color: m.you == selected ? ChemiColors.ink : ChemiColors.mutedOnInk)),
+                              Text(m.you, style: ChemiText.display(20, color: m.you == selected ? ChemiColors.ink : Colors.white)),
+                              Text(m.youProfile.nick,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: ChemiText.label(11, color: m.you == selected ? ChemiColors.ink : ChemiColors.mutedOnInk)),
+                              const SizedBox(height: 2),
+                              Text('${m.score}점', style: ChemiText.label(13, color: m.you == selected ? ChemiColors.ink : ChemiColors.pink)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
