@@ -3,6 +3,7 @@
 // RepaintBoundary + GlobalKey로 이미지 캡처
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import '../../data/models/naming_result.dart';
 
 class ShareCardWidget extends StatelessWidget {
@@ -27,11 +28,7 @@ class ShareCardWidget extends StatelessWidget {
         width: 360, // 1080 / 3.0 pixelRatio
         padding: const EdgeInsets.all(32),
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1A1A2E), Color(0xFF2D2D4A)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+          color: ChemiColors.ink,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -41,15 +38,14 @@ class ShareCardWidget extends StatelessWidget {
               '케미연구소',
               style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.w800,
+                fontFamily: ChemiFonts.display,
                 color: Colors.white,
-                letterSpacing: 4,
                 decoration: TextDecoration.none,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              'AI 사주 작명',
+              '아기 이름 찾기',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.white.withValues(alpha: 0.6),

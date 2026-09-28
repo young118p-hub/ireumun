@@ -62,7 +62,7 @@ class NameDiagnosis {
   factory NameDiagnosis.fromJson(Map<String, dynamic> json) {
     return NameDiagnosis(
       currentName: json['currentName'] as String? ?? '',
-      currentHanja: json['currentHanja'] as String? ?? '',
+      currentHanja: onlyHanja(json['currentHanja'] as String? ?? ''),
       overallScore: (json['overallScore'] as num?)?.toInt() ?? 0,
       summaryOneLine: json['summaryOneLine'] as String? ?? '',
       ohengCompat: OhengCompatibility.fromJson(
@@ -127,4 +127,11 @@ class OhengCompatibility {
         'matchDescription': matchDescription,
         'matchScore': matchScore,
       };
+}
+
+/// 맨 앞에 이어진 한자만 최대 3자. AI가 "旻 (하늘 민) — 한자 미입력으로 AI 추정…"처럼
+/// 설명을 붙여 보내는 경우가 있어서 (서버도 같은 규칙으로 저장 전에 정리한다)
+String onlyHanja(String raw) {
+  bool isHanja(int r) => (r >= 0x4E00 && r <= 0x9FFF) || (r >= 0x3400 && r <= 0x4DBF);
+  return raw.trim().runes.takeWhile(isHanja).take(3).map(String.fromCharCode).join();
 }

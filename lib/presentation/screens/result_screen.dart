@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import 'package:provider/provider.dart';
 import '../../data/services/purchase_service.dart';
 import '../../data/services/share_service.dart';
@@ -71,15 +72,15 @@ class ResultScreen extends StatelessWidget {
                       '추천 이름',
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+                        fontFamily: ChemiFonts.display,
+                        color: ChemiColors.ink,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A2E),
+                        color: ChemiColors.ink,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -96,7 +97,7 @@ class ResultScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                          color: ChemiColors.warn.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -105,8 +106,8 @@ class ResultScreen extends StatelessWidget {
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: isFreeTrial
-                                ? const Color(0xFF4CAF50)
-                                : const Color(0xFFFF6B6B),
+                                ? ChemiColors.good
+                                : ChemiColors.warn,
                           ),
                         ),
                       ),
@@ -156,12 +157,12 @@ class ResultScreen extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.lock_outline, color: Color(0xFF1A1A2E), size: 18),
+                                    Icon(Icons.lock_outline, color: ChemiColors.ink, size: 18),
                                     SizedBox(width: 8),
                                     Text(
                                       '결제 후 확인 가능',
                                       style: TextStyle(
-                                        color: Color(0xFF1A1A2E),
+                                        color: ChemiColors.ink,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
                                       ),
@@ -203,8 +204,8 @@ class ResultScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1A1A2E),
-                      side: const BorderSide(color: Color(0xFF1A1A2E), width: 1.5),
+                      foregroundColor: ChemiColors.ink,
+                      side: const BorderSide(color: ChemiColors.ink, width: 1.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -232,16 +233,16 @@ class ResultScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '결과를 버리시겠어요?',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 17, fontFamily: ChemiFonts.display),
         ),
         content: const Text(
-          '현재 작명 결과가 삭제되고\n처음부터 다시 작명할 수 있습니다.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF666666), height: 1.5),
+          '지금 결과가 지워지고\n처음부터 다시 찾을 수 있어요.',
+          style: TextStyle(fontSize: 14, color: ChemiColors.muted, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: Color(0xFF8E8E93))),
+            child: const Text('취소', style: TextStyle(color: ChemiColors.muted)),
           ),
           TextButton(
             onPressed: () async {
@@ -251,7 +252,7 @@ class ResultScreen extends StatelessWidget {
             },
             child: const Text(
               '버리고 새로 시작',
-              style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.w600),
+              style: TextStyle(color: ChemiColors.warn, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -266,15 +267,11 @@ class ResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A2E), Color(0xFF3A3A5C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: ChemiColors.ink,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A1A2E).withValues(alpha: 0.3),
+            color: ChemiColors.ink.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -286,7 +283,7 @@ class ResultScreen extends StatelessWidget {
             '전체 이름 확인하기',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w700,
+              fontFamily: ChemiFonts.display,
               color: Colors.white,
             ),
           ),
@@ -309,7 +306,7 @@ class ResultScreen extends StatelessWidget {
                   : () => provider.purchase(ProductType.naming),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF1A1A2E),
+                foregroundColor: ChemiColors.ink,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -334,11 +331,7 @@ class ResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: ChemiColors.ink,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -347,7 +340,7 @@ class ResultScreen extends StatelessWidget {
             '마음에 드셨나요?',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w700,
+              fontFamily: ChemiFonts.display,
               color: Colors.white,
             ),
           ),
@@ -366,7 +359,7 @@ class ResultScreen extends StatelessWidget {
                   : () => provider.purchase(ProductType.naming),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF4CAF50),
+                foregroundColor: ChemiColors.pinkDeep,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -409,13 +402,13 @@ class ResultScreen extends StatelessWidget {
                   '결과 공유',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    fontFamily: ChemiFonts.display,
+                    color: ChemiColors.ink,
                   ),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.text_snippet_outlined, color: Color(0xFF1A1A2E)),
+                  leading: const Icon(Icons.text_snippet_outlined, color: ChemiColors.ink),
                   title: const Text('텍스트로 공유'),
                   subtitle: const Text('카카오톡 등으로 전송'),
                   onTap: () {
@@ -428,7 +421,7 @@ class ResultScreen extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.copy, color: Color(0xFF1A1A2E)),
+                  leading: const Icon(Icons.copy, color: ChemiColors.ink),
                   title: const Text('텍스트 복사'),
                   subtitle: const Text('클립보드에 복사'),
                   onTap: () {
@@ -441,7 +434,7 @@ class ResultScreen extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('클립보드에 복사되었습니다.'),
-                        backgroundColor: Color(0xFF4CAF50),
+                        backgroundColor: ChemiColors.pinkDeep,
                       ),
                     );
                   },

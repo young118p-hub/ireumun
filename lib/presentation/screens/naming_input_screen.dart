@@ -2,6 +2,8 @@
 // 아기 + 아빠 + 엄마 생년월일시 입력 폼
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
+import '../widgets/lab_loading.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/saju_constants.dart';
 import '../../data/models/saju_input.dart';
@@ -16,10 +18,10 @@ class NamingInputScreen extends StatefulWidget {
 }
 
 class _NamingInputScreenState extends State<NamingInputScreen> {
-  // 본인 정보
+  // 아기 정보 (생일 기본값은 오늘: 1995년에서 시작하면 아기 생일까지 한참 넘겨야 했음)
   String _surname = '김';
   Gender _babyGender = Gender.male;
-  DateTime _babyDate = DateTime(1995, 1, 1);
+  DateTime _babyDate = DateUtils.dateOnly(DateTime.now());
   int _babyHour = -1;
   bool _babyKnowsHour = false;
 
@@ -39,8 +41,20 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
   // 현재 펼쳐진 섹션 (0=본인, 1=아빠, 2=엄마)
   int _expandedSection = 0;
 
+  /// AI 결과를 기다리는 동안 전체 화면 로딩 (버튼 스피너만으론 멈춘 줄 앎)
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Stack(
+        children: [
+          _buildPage(context),
+          Consumer<NamingProvider>(
+            builder: (_, p, _) => p.state == AppState.loading
+                ? const LabLoading(steps: LabLoading.babyNameSteps, eta: '30초~1분 정도 걸려요')
+                : const SizedBox.shrink(),
+          ),
+        ],
+      );
+
+  Widget _buildPage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('아기 이름 찾기'),
@@ -54,19 +68,19 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E).withValues(alpha: 0.05),
+                color: ChemiColors.ink.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, size: 20, color: Color(0xFF8E8E93)),
+                  Icon(Icons.info_outline, size: 20, color: ChemiColors.muted),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '본인 사주를 기반으로 이름을 추천합니다.\n부모 사주를 추가하면 가족 오행 균형도 반영됩니다.',
+                      '아기 사주로 어울리는 이름을 찾아요.\n엄마·아빠 사주를 넣으면 가족 오행 균형까지 봐요.',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF666666),
+                        color: ChemiColors.muted,
                         height: 1.5,
                       ),
                     ),
@@ -93,23 +107,23 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.people_outline, size: 20, color: Color(0xFF1A1A2E)),
+                  const Icon(Icons.people_outline, size: 20, color: ChemiColors.ink),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '부모 사주 포함',
+                          '엄마·아빠 사주도 넣기',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E),
+                            color: ChemiColors.ink,
                           ),
                         ),
                         Text(
                           '가족 오행 균형 분석으로 더 정교한 추천',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+                          style: TextStyle(fontSize: 11, color: ChemiColors.muted),
                         ),
                       ],
                     ),
@@ -117,8 +131,8 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                   Switch(
                     value: _includeParents,
                     onChanged: (v) => setState(() => _includeParents = v),
-                    activeThumbColor: const Color(0xFF1A1A2E),
-                    activeTrackColor: const Color(0xFF1A1A2E).withValues(alpha: 0.4),
+                    activeThumbColor: ChemiColors.ink,
+                    activeTrackColor: ChemiColors.ink.withValues(alpha: 0.4),
                   ),
                 ],
               ),
@@ -126,11 +140,11 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
 
             const SizedBox(height: 16),
 
-            // 본인 정보
+            // 아기 정보
             _buildAccordionSection(
               index: 0,
               icon: Icons.person_outline,
-              title: '본인 정보',
+              title: '아기 정보',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -264,7 +278,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
                 color: isExpanded
-                    ? const Color(0xFF1A1A2E).withValues(alpha: 0.04)
+                    ? ChemiColors.ink.withValues(alpha: 0.04)
                     : Colors.white,
                 borderRadius: isExpanded
                     ? const BorderRadius.vertical(top: Radius.circular(16))
@@ -272,24 +286,24 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(icon, size: 22, color: const Color(0xFF1A1A2E)),
+                  Icon(icon, size: 22, color: ChemiColors.ink),
                   const SizedBox(width: 12),
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      color: ChemiColors.ink,
                     ),
                   ),
                   const Spacer(),
                   // 완료 체크 (해당 섹션 입력 완료 시)
                   if (_isSectionComplete(index))
-                    const Icon(Icons.check_circle, size: 20, color: Color(0xFF4CAF50)),
+                    const Icon(Icons.check_circle, size: 20, color: ChemiColors.good),
                   const SizedBox(width: 8),
                   Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: const Color(0xFF8E8E93),
+                    color: ChemiColors.muted,
                   ),
                 ],
               ),
@@ -328,7 +342,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF2C2C2E),
+        color: ChemiColors.ink,
       ),
     );
   }
@@ -336,7 +350,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
   Widget _buildSurnameSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F6F0),
+        color: ChemiColors.chrome,
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonFormField<String>(
@@ -344,9 +358,9 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
         decoration: const InputDecoration(
           contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: InputBorder.none,
-          prefixIcon: Icon(Icons.person_outline, color: Color(0xFF8E8E93), size: 20),
+          prefixIcon: Icon(Icons.person_outline, color: ChemiColors.muted, size: 20),
         ),
-        style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+        style: const TextStyle(fontSize: 15, color: ChemiColors.ink),
         dropdownColor: Colors.white,
         items: SajuConstants.commonSurnames.map((s) {
           return DropdownMenuItem(value: s, child: Text('$s씨'));
@@ -374,24 +388,24 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFF8F6F0),
+            color: selected ? ChemiColors.ink : ChemiColors.chrome,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+              color: selected ? ChemiColors.ink : ChemiColors.chrome,
               width: 1.5,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: selected ? Colors.white : const Color(0xFF8E8E93)),
+              Icon(icon, size: 18, color: selected ? Colors.white : ChemiColors.muted),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFF2C2C2E),
+                  color: selected ? Colors.white : ChemiColors.ink,
                 ),
               ),
             ],
@@ -407,19 +421,19 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F6F0),
+          color: ChemiColors.chrome,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, color: Color(0xFF8E8E93), size: 18),
+            const Icon(Icons.calendar_today_outlined, color: ChemiColors.muted, size: 18),
             const SizedBox(width: 10),
             Text(
               '${date.year}년 ${date.month}월 ${date.day}일',
-              style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+              style: const TextStyle(fontSize: 15, color: ChemiColors.ink),
             ),
             const Spacer(),
-            const Icon(Icons.chevron_right, color: Color(0xFFC7C7CC), size: 20),
+            const Icon(Icons.chevron_right, color: ChemiColors.disabled, size: 20),
           ],
         ),
       ),
@@ -438,7 +452,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1A1A2E),
+              primary: ChemiColors.ink,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -470,7 +484,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F6F0),
+              color: ChemiColors.chrome,
               borderRadius: BorderRadius.circular(12),
             ),
             child: GridView.builder(
@@ -494,7 +508,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                   onTap: () => onHourChanged(startHour == 23 ? 23 : startHour + 1),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF1A1A2E) : Colors.white,
+                      color: isSelected ? ChemiColors.ink : Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -505,14 +519,14 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : const Color(0xFF2C2C2E),
+                            color: isSelected ? Colors.white : ChemiColors.ink,
                           ),
                         ),
                         Text(
                           '${startHour.toString().padLeft(2, '0')}~${((startHour + 2) % 24).toString().padLeft(2, '0')}시',
                           style: TextStyle(
                             fontSize: 9,
-                            color: isSelected ? Colors.white70 : const Color(0xFF8E8E93),
+                            color: isSelected ? Colors.white70 : ChemiColors.muted,
                           ),
                         ),
                       ],
@@ -534,10 +548,10 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFF8F6F0),
+            color: selected ? ChemiColors.ink : ChemiColors.chrome,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+              color: selected ? ChemiColors.ink : ChemiColors.chrome,
             ),
           ),
           child: Center(
@@ -546,7 +560,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : const Color(0xFF2C2C2E),
+                color: selected ? Colors.white : ChemiColors.ink,
               ),
             ),
           ),
@@ -569,9 +583,9 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
           child: ElevatedButton(
             onPressed: isLoading ? null : _onSubmit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A1A2E),
+              backgroundColor: ChemiColors.ink,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0xFFC7C7CC),
+              disabledBackgroundColor: ChemiColors.disabled,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -594,8 +608,8 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
                     ],
                   )
                 : const Text(
-                    '작명 시작',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1),
+                    '이름 찾기',
+                    style: TextStyle(fontSize: 18, fontFamily: ChemiFonts.display),
                   ),
           ),
         );
@@ -672,7 +686,7 @@ class _NamingInputScreenState extends State<NamingInputScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: ChemiColors.warn,
       ),
     );
   }

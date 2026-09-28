@@ -17,6 +17,8 @@ class ChemiColors {
   static const muted = Color(0xFF5E5F6B); // 보조 글씨 (크롬 위 4.5:1 이상)
   static const mutedOnInk = Color(0xFFC9CCD6); // 검은 바탕 위 보조 글씨
   static const disabled = Color(0xFF9C9DA8);
+  static const good = Color(0xFF0F8A5F); // 장점·완료 (흰 바탕 4.5:1 이상)
+  static const warn = Color(0xFFD1344A); // 문제점·삭제 (흰 바탕 4.5:1 이상)
 }
 
 class ChemiFonts {

@@ -2,6 +2,7 @@
 // 사주 네 기둥 + 오행 분포 시각화 (모던 미니멀 디자인)
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import '../../data/models/naming_result.dart';
 
 class SajuCard extends StatelessWidget {
@@ -30,14 +31,14 @@ class SajuCard extends StatelessWidget {
           // 타이틀
           const Row(
             children: [
-              Icon(Icons.auto_awesome, size: 18, color: Color(0xFF1A1A2E)),
+              Icon(Icons.auto_awesome, size: 18, color: ChemiColors.ink),
               SizedBox(width: 8),
               Text(
                 '사주 분석',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  fontFamily: ChemiFonts.display,
+                  color: ChemiColors.ink,
                 ),
               ),
             ],
@@ -61,7 +62,7 @@ class SajuCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F3EE),
+              color: ChemiColors.chrome,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -71,7 +72,7 @@ class SajuCard extends StatelessWidget {
                   '일간',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF999999),
+                    color: ChemiColors.muted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -80,8 +81,8 @@ class SajuCard extends StatelessWidget {
                   saju.dayMaster,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
+                    fontFamily: ChemiFonts.display,
+                    color: ChemiColors.ink,
                   ),
                 ),
               ],
@@ -89,7 +90,7 @@ class SajuCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 18),
-          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const Divider(height: 1, color: ChemiColors.chrome),
           const SizedBox(height: 16),
 
           // 오행 분포 바 차트
@@ -98,7 +99,7 @@ class SajuCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF666666),
+              color: ChemiColors.muted,
             ),
           ),
           const SizedBox(height: 12),
@@ -109,14 +110,14 @@ class SajuCard extends StatelessWidget {
           // 부족/과다 오행
           Row(
             children: [
-              _buildOhengTag('부족', saju.weakElement, const Color(0xFF0984E3)),
+              _buildOhengTag('부족', saju.weakElement, ChemiColors.pinkDeep),
               const SizedBox(width: 10),
               _buildOhengTag('강함', saju.strongElement, const Color(0xFFFF7675)),
             ],
           ),
 
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const Divider(height: 1, color: ChemiColors.chrome),
           const SizedBox(height: 14),
 
           // 종합 설명
@@ -124,7 +125,7 @@ class SajuCard extends StatelessWidget {
             saju.summary,
             style: const TextStyle(
               fontSize: 13,
-              color: Color(0xFF555555),
+              color: ChemiColors.muted,
               height: 1.6,
             ),
           ),
@@ -143,7 +144,7 @@ class SajuCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F3EE),
+          color: ChemiColors.chrome,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -152,7 +153,7 @@ class SajuCard extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 11,
-                color: Color(0xFF999999),
+                color: ChemiColors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -161,8 +162,8 @@ class SajuCard extends StatelessWidget {
               cheongan,
               style: const TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                fontFamily: ChemiFonts.display,
+                color: ChemiColors.ink,
               ),
             ),
             const SizedBox(height: 2),
@@ -170,8 +171,8 @@ class SajuCard extends StatelessWidget {
               jiji,
               style: const TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                fontFamily: ChemiFonts.display,
+                color: ChemiColors.ink,
               ),
             ),
           ],
@@ -206,7 +207,7 @@ class SajuCard extends StatelessWidget {
                 width: 32,
                 child: Text(
                   '${info.$2} $element',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF888888), fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 11, color: ChemiColors.muted, fontWeight: FontWeight.w500),
                 ),
               ),
               const SizedBox(width: 8),
@@ -216,7 +217,7 @@ class SajuCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: ratio,
                     minHeight: 8,
-                    backgroundColor: const Color(0xFFF5F3EE),
+                    backgroundColor: ChemiColors.chrome,
                     valueColor: AlwaysStoppedAnimation(info.$1),
                   ),
                 ),
@@ -229,7 +230,7 @@ class SajuCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF555555),
+                    color: ChemiColors.muted,
                   ),
                   textAlign: TextAlign.right,
                 ),

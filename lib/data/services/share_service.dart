@@ -72,7 +72,7 @@ class ShareService {
     required SajuAnalysis saju,
   }) async {
     final buffer = StringBuffer();
-    buffer.writeln('🎒 케미연구소 - AI 사주 작명 결과');
+    buffer.writeln('🧪 케미연구소 - 아기 이름 찾기 결과');
     buffer.writeln('');
     buffer.writeln('📋 사주: ${saju.fourPillarsDisplay}');
     buffer.writeln('⚖️ 부족 오행: ${saju.weakElement} / 강한 오행: ${saju.strongElement}');
@@ -100,7 +100,7 @@ class ShareService {
     required SajuAnalysis saju,
   }) async {
     final buffer = StringBuffer();
-    buffer.writeln('케미연구소 - AI 사주 작명 결과');
+    buffer.writeln('케미연구소 - 아기 이름 찾기 결과');
     buffer.writeln('');
 
     for (int i = 0; i < names.length; i++) {

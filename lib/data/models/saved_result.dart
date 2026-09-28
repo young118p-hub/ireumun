@@ -132,7 +132,7 @@ class SavedResult {
       case SavedResultType.diagnosis:
         if (diagnosisInput != null) return diagnosisInput!.fullName;
         final name = diagnosisResult?.diagnosis.currentName ?? '';
-        return name.isEmpty ? '이름 진단' : '$surname$name';
+        return name.isEmpty ? '내 이름 케미' : '$surname$name';
     }
   }
 

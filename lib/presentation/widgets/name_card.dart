@@ -2,6 +2,7 @@
 // 추천 이름 하나의 상세 정보 표시 (모던 디자인)
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import '../../data/models/naming_result.dart';
 
 class NameCard extends StatelessWidget {
@@ -44,8 +45,8 @@ class NameCard extends StatelessWidget {
                 height: 28,
                 decoration: BoxDecoration(
                   color: rank <= 3
-                      ? const Color(0xFF1A1A2E)
-                      : const Color(0xFFE8E4DE),
+                      ? ChemiColors.ink
+                      : ChemiColors.chrome,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -54,7 +55,7 @@ class NameCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: rank <= 3 ? Colors.white : const Color(0xFF666666),
+                      color: rank <= 3 ? Colors.white : ChemiColors.muted,
                     ),
                   ),
                 ),
@@ -66,9 +67,8 @@ class NameCard extends StatelessWidget {
                 '$surname${name.name}',
                 style: const TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: 2,
+                  fontFamily: ChemiFonts.display,
+                  color: ChemiColors.ink,
                 ),
               ),
               const SizedBox(width: 10),
@@ -78,7 +78,7 @@ class NameCard extends StatelessWidget {
                 '${_getHanjaSurname(surname)}${name.hanja}',
                 style: TextStyle(
                   fontSize: 15,
-                  color: const Color(0xFF1A1A2E).withValues(alpha: 0.4),
+                  color: ChemiColors.ink.withValues(alpha: 0.4),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -105,13 +105,13 @@ class NameCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const Divider(height: 1, color: ChemiColors.chrome),
           const SizedBox(height: 14),
 
           // 한자 글자별 풀이 (이름 글자만)
           _buildHanjaBreakdown(),
           const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const Divider(height: 1, color: ChemiColors.chrome),
           const SizedBox(height: 12),
 
           // 뜻 풀이
@@ -144,7 +144,7 @@ class NameCard extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F6F0),
+              color: ChemiColors.chrome,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -154,7 +154,7 @@ class NameCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
+                    color: ChemiColors.ink,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -162,7 +162,7 @@ class NameCard extends StatelessWidget {
                   seg.reading,
                   style: const TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF666666),
+                    color: ChemiColors.muted,
                     height: 1.3,
                   ),
                   textAlign: TextAlign.center,
@@ -201,7 +201,7 @@ class NameCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF999999),
+              color: ChemiColors.muted,
             ),
           ),
         ),
@@ -211,7 +211,7 @@ class NameCard extends StatelessWidget {
             value,
             style: const TextStyle(
               fontSize: 13,
-              color: Color(0xFF444444),
+              color: ChemiColors.muted,
               height: 1.5,
             ),
           ),

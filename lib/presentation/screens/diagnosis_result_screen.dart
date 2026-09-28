@@ -1,10 +1,12 @@
-// 이름 진단 결과 화면
+// 내 이름 케미 결과 화면 (서버의 이름 진단 결과)
 // B 방식: 종합 점수 + 1줄 요약 무료 공개
 // 상세 분석 + 개선 이름은 결제 후 공개
 // 업셀링: 추가 개선 이름 5개 (가격은 PurchaseService의 Prices)
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
+import '../widgets/beaker.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/diagnosis_result.dart';
 import '../../data/services/purchase_service.dart';
@@ -38,7 +40,12 @@ class DiagnosisResultScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 종합 점수 카드 (항상 공개)
-                _buildScoreCard(diagnosis, surname),
+                _buildScoreCard(
+                      diagnosis,
+                      surname,
+                      // 입력 원본이 있고 한자를 비워 뒀으면 AI가 고른 한자
+                      hanjaGuessed: provider.lastDiagnosisInput?.currentHanja.trim().isEmpty ?? false,
+                    ),
 
                 const SizedBox(height: 20),
 
@@ -56,11 +63,11 @@ class DiagnosisResultScreen extends StatelessWidget {
 
                   // 장점 & 문제점
                   if (diagnosis.strengths.isNotEmpty)
-                    _buildListSection('장점', diagnosis.strengths, const Color(0xFF4CAF50)),
+                    _buildListSection('장점', diagnosis.strengths, ChemiColors.good),
 
                   if (diagnosis.problems.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _buildListSection('문제점', diagnosis.problems, const Color(0xFFFF6B6B)),
+                    _buildListSection('문제점', diagnosis.problems, ChemiColors.warn),
                   ],
 
                   const SizedBox(height: 20),
@@ -96,12 +103,12 @@ class DiagnosisResultScreen extends StatelessWidget {
                       child: TextButton(
                         onPressed: () => _confirmDiscard(context, provider),
                         child: const Text(
-                          '이 결과 버리고 새로 진단하기',
+                          '이 결과 버리고 새로 측정하기',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFFAAAAAA),
+                            color: ChemiColors.muted,
                             decoration: TextDecoration.underline,
-                            decorationColor: Color(0xFFAAAAAA),
+                            decorationColor: ChemiColors.muted,
                           ),
                         ),
                       ),
@@ -120,8 +127,8 @@ class DiagnosisResultScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1A1A2E),
-                      side: const BorderSide(color: Color(0xFF1A1A2E), width: 1.5),
+                      foregroundColor: ChemiColors.ink,
+                      side: const BorderSide(color: ChemiColors.ink, width: 1.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -149,16 +156,16 @@ class DiagnosisResultScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           '결과를 버리시겠어요?',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 17, fontFamily: ChemiFonts.display),
         ),
         content: const Text(
-          '현재 진단 결과가 삭제되고\n처음부터 다시 진단할 수 있습니다.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF666666), height: 1.5),
+          '지금 결과가 지워지고\n처음부터 다시 측정할 수 있어요.',
+          style: TextStyle(fontSize: 14, color: ChemiColors.muted, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: Color(0xFF8E8E93))),
+            child: const Text('취소', style: TextStyle(color: ChemiColors.muted)),
           ),
           TextButton(
             onPressed: () async {
@@ -168,7 +175,7 @@ class DiagnosisResultScreen extends StatelessWidget {
             },
             child: const Text(
               '버리고 새로 시작',
-              style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.w600),
+              style: TextStyle(color: ChemiColors.warn, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -179,85 +186,47 @@ class DiagnosisResultScreen extends StatelessWidget {
   // ============================================================
   // 종합 점수 카드 (항상 공개)
   // ============================================================
-  Widget _buildScoreCard(NameDiagnosis diagnosis, String surname) {
+  Widget _buildScoreCard(NameDiagnosis diagnosis, String surname, {required bool hanjaGuessed}) {
     final score = diagnosis.overallScore;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _getScoreColor(score),
-            _getScoreColor(score).withValues(alpha: 0.7),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: _getScoreColor(score).withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(22, 20, 16, 20),
+      decoration: BoxDecoration(color: ChemiColors.pink, borderRadius: BorderRadius.circular(28)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            '$surname${diagnosis.currentName}',
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: 4,
-            ),
-          ),
-          if (diagnosis.currentHanja.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              diagnosis.currentHanja,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.2),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$score',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('내 사주 × 내 이름', style: ChemiText.label(13)),
+                const SizedBox(height: 4),
+                Text.rich(TextSpan(children: [
+                  TextSpan(text: '$surname${diagnosis.currentName}', style: ChemiText.display(28)),
+                  if (diagnosis.currentHanja.isNotEmpty)
+                    TextSpan(
+                      text: '  ${diagnosis.currentHanja}${hanjaGuessed ? ' · AI 추정 한자' : ''}',
+                      style: ChemiText.body(14, color: ChemiColors.ink),
                     ),
-                  ),
-                  const Text('점', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                ],
-              ),
+                ])),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: '$score', style: ChemiText.display(80, height: 1.0)),
+                    TextSpan(text: '점', style: ChemiText.display(26)),
+                  ]),
+                  semanticsLabel: '$score점',
+                ),
+                const SizedBox(height: 4),
+                Text(diagnosis.summaryOneLine, style: ChemiText.display(19, height: 1.3)),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            diagnosis.summaryOneLine,
-            style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
+          const Beaker(width: 72),
         ],
       ),
     );
   }
+
 
   // ============================================================
   // 미결제 잠금 영역
@@ -315,15 +284,11 @@ class DiagnosisResultScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0984E3), Color(0xFF6C5CE7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: ChemiColors.ink,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0984E3).withValues(alpha: 0.3),
+                color: ChemiColors.pinkDeep.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -333,7 +298,7 @@ class DiagnosisResultScreen extends StatelessWidget {
             children: [
               const Text(
                 '상세 분석 확인하기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                style: TextStyle(fontSize: 18, fontFamily: ChemiFonts.display, color: Colors.white),
               ),
               const SizedBox(height: 8),
               Text(
@@ -352,7 +317,7 @@ class DiagnosisResultScreen extends StatelessWidget {
                       : () => provider.purchase(ProductType.diagnosis),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0984E3),
+                    foregroundColor: ChemiColors.pinkDeep,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
@@ -393,9 +358,9 @@ class DiagnosisResultScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.balance, size: 18, color: Color(0xFF1A1A2E)),
+              const Icon(Icons.balance, size: 18, color: ChemiColors.ink),
               const SizedBox(width: 8),
-              const Text('오행 적합도', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              const Text('오행 적합도', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ChemiColors.ink)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -411,7 +376,7 @@ class DiagnosisResultScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(compat.matchDescription, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.5)),
+          Text(compat.matchDescription, style: const TextStyle(fontSize: 13, color: ChemiColors.muted, height: 1.5)),
           if (diagnosis.strokeAnalysis.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildAnalysisRow('획수', diagnosis.strokeAnalysis),
@@ -429,9 +394,9 @@ class DiagnosisResultScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 36, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF999999)))),
+          SizedBox(width: 36, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ChemiColors.muted))),
           const SizedBox(width: 8),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.4))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, color: ChemiColors.muted, height: 1.4))),
         ],
       ),
     );
@@ -457,7 +422,7 @@ class DiagnosisResultScreen extends StatelessWidget {
               children: [
                 Icon(title == '장점' ? Icons.thumb_up_outlined : Icons.warning_amber_outlined, size: 16, color: color.withValues(alpha: 0.6)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(item, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.4))),
+                Expanded(child: Text(item, style: const TextStyle(fontSize: 13, color: ChemiColors.muted, height: 1.4))),
               ],
             ),
           )),
@@ -478,12 +443,12 @@ class DiagnosisResultScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(children: [
-            Icon(Icons.article_outlined, size: 18, color: Color(0xFF1A1A2E)),
+            Icon(Icons.article_outlined, size: 18, color: ChemiColors.ink),
             SizedBox(width: 8),
-            Text('상세 분석', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+            Text('상세 분석', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ChemiColors.ink)),
           ]),
           const SizedBox(height: 12),
-          Text(diagnosis.detailAnalysis, style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.6)),
+          Text(diagnosis.detailAnalysis, style: const TextStyle(fontSize: 13, color: ChemiColors.muted, height: 1.6)),
         ],
       ),
     );
@@ -495,11 +460,11 @@ class DiagnosisResultScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [
-          const Text('개선 추천 이름', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF0984E3))),
+          const Text('개선 추천 이름', style: TextStyle(fontSize: 20, fontFamily: ChemiFonts.display, color: ChemiColors.pinkDeep)),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: const Color(0xFF0984E3), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: ChemiColors.pinkDeep, borderRadius: BorderRadius.circular(10)),
             child: Text('${names.length}개', style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ]),
@@ -516,9 +481,8 @@ class DiagnosisResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF0984E3), Color(0xFF6C5CE7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: ChemiColors.ink,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: const Color(0xFF0984E3).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -536,7 +500,7 @@ class DiagnosisResultScreen extends StatelessWidget {
                   : () => provider.purchase(ProductType.diagnosisUpgrade),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0984E3),
+                foregroundColor: ChemiColors.pinkDeep,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),

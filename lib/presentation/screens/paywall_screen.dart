@@ -3,6 +3,7 @@
 // 받아 둔 결과가 있어야 결제할 수 있다 (결과 없이 결제되면 풀어줄 게 없어서 돈만 나감)
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import 'package:provider/provider.dart';
 import '../../data/services/purchase_service.dart';
 import '../providers/naming_provider.dart';
@@ -47,14 +48,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   '케미연구소 이용권',
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
+                    fontFamily: ChemiFonts.display,
+                    color: ChemiColors.ink,
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'AI 사주 분석으로 최적의 이름을 찾아보세요',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF8E8E93)),
+                  '받아 둔 결과를 전체로 열어 보세요',
+                  style: TextStyle(fontSize: 14, color: ChemiColors.muted),
                 ),
 
                 const SizedBox(height: 28),
@@ -73,9 +74,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         ? null
                         : () => provider.purchase(_selectedType),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A1A2E),
+                      backgroundColor: ChemiColors.ink,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFC7C7CC),
+                      disabledBackgroundColor: ChemiColors.disabled,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -92,7 +93,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           )
                         : Text(
                             '${_getSelectedProduct(provider).priceString} 구매하기',
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                            style: const TextStyle(fontSize: 17, fontFamily: ChemiFonts.display),
                           ),
                   ),
                 ),
@@ -102,10 +103,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   const SizedBox(height: 12),
                   Text(
                     _selectedType == ProductType.bundle
-                        ? '묶음 할인은 결제 전인 작명 결과와 진단 결과가 하나씩 있을 때 쓸 수 있어요.'
-                        : '먼저 ${_selectedType == ProductType.naming ? '작명' : '진단'}을 받아 보세요. 결과를 본 뒤에 결제할 수 있어요.',
+                        ? '묶음 할인은 결제 전인 아기 이름과 내 이름 케미 결과가 하나씩 있을 때 쓸 수 있어요.'
+                        : '먼저 ${_selectedType == ProductType.naming ? '아기 이름 찾기' : '내 이름 케미'}로 결과를 받아 보세요. 결과를 본 뒤에 결제할 수 있어요.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93), height: 1.5),
+                    style: const TextStyle(fontSize: 13, color: ChemiColors.muted, height: 1.5),
                   ),
                 ],
 
@@ -114,7 +115,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 // 안내 문구
                 const Text(
                   '일회성 결제이며, 구독이 아닙니다.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
+                  style: TextStyle(fontSize: 12, color: ChemiColors.muted),
                 ),
 
                 const SizedBox(height: 32),
@@ -143,13 +144,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+            color: isSelected ? ChemiColors.ink : ChemiColors.chrome,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF1A1A2E).withValues(alpha: 0.12),
+                    color: ChemiColors.ink.withValues(alpha: 0.12),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -168,7 +169,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFFC7C7CC),
+                      color: isSelected ? ChemiColors.ink : ChemiColors.disabled,
                       width: 2,
                     ),
                   ),
@@ -179,7 +180,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             height: 12,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFF1A1A2E),
+                              color: ChemiColors.ink,
                             ),
                           ),
                         )
@@ -198,8 +199,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             product.label,
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFF555555),
+                              fontFamily: ChemiFonts.display,
+                              color: isSelected ? ChemiColors.ink : ChemiColors.muted,
                             ),
                           ),
                           if (isBundle) ...[
@@ -207,7 +208,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
+                                color: ChemiColors.warn.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -215,7 +216,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFFF6B6B),
+                                  color: ChemiColors.warn,
                                 ),
                               ),
                             ),
@@ -225,7 +226,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       const SizedBox(height: 2),
                       Text(
                         product.subtitle,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
+                        style: const TextStyle(fontSize: 12, color: ChemiColors.muted),
                       ),
                     ],
                   ),
@@ -236,8 +237,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   product.priceString,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFF8E8E93),
+                    fontFamily: ChemiFonts.display,
+                    color: isSelected ? ChemiColors.ink : ChemiColors.muted,
                   ),
                 ),
               ],
@@ -246,15 +247,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
             // 포함 기능 (선택 시)
             if (isSelected) ...[
               const SizedBox(height: 14),
-              const Divider(height: 1, color: Color(0xFFF0EDE8)),
+              const Divider(height: 1, color: ChemiColors.chrome),
               const SizedBox(height: 12),
               ...product.features.map((f) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
-                    const Icon(Icons.check, size: 16, color: Color(0xFF4CAF50)),
+                    const Icon(Icons.check, size: 16, color: ChemiColors.good),
                     const SizedBox(width: 8),
-                    Text(f, style: const TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                    Text(f, style: const TextStyle(fontSize: 13, color: ChemiColors.muted)),
                   ],
                 ),
               )),

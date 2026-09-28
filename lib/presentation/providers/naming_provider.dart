@@ -168,7 +168,7 @@ class NamingProvider extends ChangeNotifier {
   /// 이름 진단
   Future<void> diagnoseName(DiagnosisInput input) async {
     if (hasUnpaidDiagnosis) {
-      _setError('이전 진단 결과가 미결제 상태입니다. 결제 후 새로운 진단이 가능합니다.');
+      _setError('결제 전인 내 이름 케미 결과가 있어요. 그 결과를 결제하거나 지운 뒤에 새로 측정할 수 있어요.');
       notifyListeners();
       return;
     }
@@ -232,7 +232,7 @@ class NamingProvider extends ChangeNotifier {
     final targets = purchaseTargets(type);
     if (targets.isEmpty) {
       onNotice?.call(type == ProductType.bundle
-          ? '묶음 할인은 결제 전인 작명 결과와 진단 결과가 하나씩 있을 때 쓸 수 있어요.'
+          ? '묶음 할인은 결제 전인 아기 이름과 내 이름 케미 결과가 하나씩 있을 때 쓸 수 있어요.'
           : '결제할 결과가 없어요. 먼저 결과를 받아 주세요.');
       return;
     }

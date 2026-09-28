@@ -169,7 +169,7 @@ class PurchaseService {
     PlanProduct(
       productId: 'naming_new',
       type: ProductType.naming,
-      label: '신규 작명',
+      label: '아기 이름 찾기',
       subtitle: '사주 기반 이름 전체 공개',
       fallbackPrice: Prices.naming,
       nameCount: 5,
@@ -183,7 +183,7 @@ class PurchaseService {
     PlanProduct(
       productId: 'diagnosis',
       type: ProductType.diagnosis,
-      label: '이름 진단',
+      label: '내 이름 케미',
       subtitle: '현재 이름의 사주 궁합 분석',
       fallbackPrice: Prices.diagnosis,
       nameCount: 3,
@@ -197,19 +197,19 @@ class PurchaseService {
       productId: 'bundle',
       type: ProductType.bundle,
       label: '묶음 할인',
-      subtitle: '받아 둔 작명 + 진단 결과 함께 열기',
+      subtitle: '받아 둔 아기 이름 + 내 이름 케미 함께 열기',
       fallbackPrice: Prices.bundle,
       nameCount: 8,
       features: [
-        '작명 결과 전체 (이름 5개)',
-        '진단 결과 전체 (개선 이름 3개)',
+        '아기 이름 전체 (이름 5개)',
+        '내 이름 케미 전체 (개선 이름 3개)',
       ],
     ),
     PlanProduct(
       productId: 'diagnosis_upgrade',
       type: ProductType.diagnosisUpgrade,
       label: '개선 이름 추가',
-      subtitle: '진단 후 개선 이름 5개 더 받기',
+      subtitle: '내 이름 케미 뒤 개선 이름 5개 더 받기',
       fallbackPrice: Prices.diagnosisUpgrade,
       nameCount: 5,
       features: [

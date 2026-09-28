@@ -2,6 +2,7 @@
 // 아기 + 아빠 + 엄마 오행 균형 종합 분석 카드
 
 import 'package:flutter/material.dart';
+import '../../core/theme/chemi_theme.dart';
 import '../../data/models/naming_result.dart';
 
 class FamilySajuCard extends StatelessWidget {
@@ -33,14 +34,14 @@ class FamilySajuCard extends StatelessWidget {
           // 타이틀
           const Row(
             children: [
-              Icon(Icons.family_restroom, size: 20, color: Color(0xFF1A1A2E)),
+              Icon(Icons.family_restroom, size: 20, color: ChemiColors.ink),
               SizedBox(width: 8),
               Text(
                 '가족 오행 균형 분석',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  fontFamily: ChemiFonts.display,
+                  color: ChemiColors.ink,
                 ),
               ),
             ],
@@ -60,7 +61,7 @@ class FamilySajuCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 18),
-          const Divider(height: 1, color: Color(0xFFF0EDE8)),
+          const Divider(height: 1, color: ChemiColors.chrome),
           const SizedBox(height: 16),
 
           // 가족 종합 오행 분포
@@ -69,7 +70,7 @@ class FamilySajuCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF666666),
+              color: ChemiColors.muted,
             ),
           ),
           const SizedBox(height: 12),
@@ -80,7 +81,7 @@ class FamilySajuCard extends StatelessWidget {
           // 부족/과다 오행
           Row(
             children: [
-              _buildTag('부족', family.familyWeakElement, const Color(0xFF0984E3)),
+              _buildTag('부족', family.familyWeakElement, ChemiColors.pinkDeep),
               const SizedBox(width: 10),
               _buildTag('과잉', family.familyStrongElement, const Color(0xFFFF7675)),
             ],
@@ -89,13 +90,13 @@ class FamilySajuCard extends StatelessWidget {
           // 추천 코멘트
           if (family.recommendation.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: Color(0xFFF0EDE8)),
+            const Divider(height: 1, color: ChemiColors.chrome),
             const SizedBox(height: 14),
             Text(
               family.recommendation,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF555555),
+                color: ChemiColors.muted,
                 height: 1.6,
               ),
             ),
@@ -111,7 +112,7 @@ class FamilySajuCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F3EE),
+          color: ChemiColors.chrome,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -120,7 +121,7 @@ class FamilySajuCard extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 11,
-                color: Color(0xFF999999),
+                color: ChemiColors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -129,8 +130,8 @@ class FamilySajuCard extends StatelessWidget {
               saju.dayMaster,
               style: const TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                fontFamily: ChemiFonts.display,
+                color: ChemiColors.ink,
               ),
             ),
             const SizedBox(height: 2),
@@ -138,7 +139,7 @@ class FamilySajuCard extends StatelessWidget {
               '${saju.weakElement} 부족',
               style: const TextStyle(
                 fontSize: 10,
-                color: Color(0xFF0984E3),
+                color: ChemiColors.pinkDeep,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -174,7 +175,7 @@ class FamilySajuCard extends StatelessWidget {
                 width: 32,
                 child: Text(
                   '${info.$2} $element',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF888888), fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 11, color: ChemiColors.muted, fontWeight: FontWeight.w500),
                 ),
               ),
               const SizedBox(width: 8),
@@ -184,7 +185,7 @@ class FamilySajuCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: ratio,
                     minHeight: 8,
-                    backgroundColor: const Color(0xFFF5F3EE),
+                    backgroundColor: ChemiColors.chrome,
                     valueColor: AlwaysStoppedAnimation(info.$1),
                   ),
                 ),
@@ -194,7 +195,7 @@ class FamilySajuCard extends StatelessWidget {
                 width: 16,
                 child: Text(
                   '$count',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ChemiColors.muted),
                   textAlign: TextAlign.right,
                 ),
               ),
