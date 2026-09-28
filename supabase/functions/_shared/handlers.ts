@@ -40,6 +40,13 @@ const DIAGNOSIS_UPGRADE_COUNT = 5;
 
 const OHENG = ["목", "화", "토", "금", "수"];
 
+/** 맨 앞에 이어진 한자만, 최대 3자 ("旻 (하늘 민) — …吉字…" → "旻") */
+export function onlyHanja(v: unknown): string {
+  if (typeof v !== "string") return "";
+  const m = v.trim().match(/^[\u3400-\u4DBF\u4E00-\u9FFF]+/);
+  return m ? [...m[0]].slice(0, 3).join("") : "";
+}
+
 function str(v: unknown, field: string, min: number, max: number): string {
   if (typeof v !== "string" || v.length < min || v.length > max) {
     throw new ApiError(400, "invalid_input", `입력값을 확인해 주세요 (${field}).`);
@@ -146,7 +153,10 @@ export async function handleGenerate(deps: Deps, user: AuthUser, body: Record<st
         (j: any) => typeof j.diagnosis === "object" && j.diagnosis !== null && typeof j.diagnosis.overallScore === "number",
         type,
       );
-      content = { saju: input.saju, diagnosis: json.diagnosis, improvementNames: json.improvementNames ?? [] };
+      // AI가 한자 칸에 설명 문장을 붙여 보내는 경우가 있어서 한자만 남긴다 (최대 3자)
+      const diagnosis = { ...(json.diagnosis as Record<string, unknown>) };
+      diagnosis.currentHanja = onlyHanja(diagnosis.currentHanja);
+      content = { saju: input.saju, diagnosis, improvementNames: json.improvementNames ?? [] };
     } else {
       const prompt = type === "naming"
         ? buildNamingPrompt({ ...input, nameCount: NAMING_COUNT })

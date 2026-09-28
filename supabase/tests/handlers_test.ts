@@ -4,6 +4,7 @@ import { handleGenerate, handleMe, handlePrepare, handleVerify, type Deps } from
 import { ApiError } from "../functions/_shared/http.ts";
 import type { PlayPurchase } from "../functions/_shared/play.ts";
 import { MemoryRepo } from "./memory_repo.ts";
+import { onlyHanja } from "../functions/_shared/handlers.ts";
 
 const SAJU = {
   yearPillar: "갑진", monthPillar: "병인", dayPillar: "무술", hourPillar: "미상", dayMaster: "무",
@@ -252,4 +253,11 @@ Deno.test("내 결과 복원: 결제한 건 전체, 안 한 건 미리보기", a
   assertEquals((byId[a.id].content.names as unknown[]).length, 5);
   assertEquals(me.results.filter((r) => !r.unlocked).length, 1);
   assertEquals(me.previewsLeft, 2);
+});
+
+Deno.test("한자 칸 정리: AI가 설명 문장을 붙여 보내도 한자만 최대 3자", () => {
+  assertEquals(onlyHanja("旻 (하늘 민) — 한자 미입력으로 AI 추정: 음차 '민'에 가장 자주 쓰이는 吉字 선택"), "旻");
+  assertEquals(onlyHanja("추정: 敏"), "");
+  assertEquals(onlyHanja("敏秀"), "敏秀");
+  assertEquals(onlyHanja(null), "");
 });
