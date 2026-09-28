@@ -20,6 +20,7 @@ import {
   buildDiagnosisUpgradePrompt,
   buildNamingPrompt,
   buildNamingSimplePrompt,
+  buildPairReportPrompt,
 } from "./prompts.ts";
 
 export interface Deps {
@@ -132,6 +133,7 @@ function parseGenerateInput(body: Record<string, unknown>): { type: RequestType;
 // ============================================================
 
 export async function handleGenerate(deps: Deps, user: AuthUser, body: Record<string, unknown>) {
+  if (body.type === "pair") return await handleCreatePair(deps, user, body);
   const deviceId = requireDeviceId(body.deviceId);
   const { type, kind, input } = parseGenerateInput(body);
 
@@ -188,6 +190,83 @@ export async function handleGenerate(deps: Deps, user: AuthUser, body: Record<st
     await deps.repo.releaseClaim(claim.claimId).catch((err) => console.error("releaseClaim failed", err));
     throw e;
   }
+}
+
+// ============================================================
+// 우리 케미: 결제할 결과 자리 만들기 (AI 없음, 미리보기 한도도 쓰지 않음)
+// 무료 점수·해설은 앱이 규칙으로 만들고, 여기에는 그 입력과 규칙 결과만 저장한다.
+// AI 전체 리포트는 결제 검증 뒤(deliver)에만 만든다.
+// ============================================================
+
+const PAIR_RELATIONS = ["lover", "friend", "coworker"];
+
+function int(v: unknown, field: string, min: number, max: number): number {
+  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max) {
+    throw new ApiError(400, "invalid_input", `입력값을 확인해 주세요 (${field}).`);
+  }
+  return v;
+}
+
+function list(v: unknown, field: string, max: number): any[] {
+  if (!Array.isArray(v) || v.length === 0 || v.length > max) {
+    throw new ApiError(400, "invalid_input", `입력값을 확인해 주세요 (${field}).`);
+  }
+  return v;
+}
+
+export function parsePairInput(body: Record<string, unknown>): Record<string, unknown> {
+  if (!PAIR_RELATIONS.includes(body.relation as string)) {
+    throw new ApiError(400, "invalid_input", "입력값을 확인해 주세요 (관계).");
+  }
+  const people = list(body.people, "두 사람", 2);
+  if (people.length !== 2) throw new ApiError(400, "invalid_input", "입력값을 확인해 주세요 (두 사람).");
+  const rules = (body.rules ?? {}) as Record<string, any>;
+  return {
+    relation: body.relation,
+    people: people.map((p: any, i: number) => ({
+      name: str(p?.name, `이름 ${i + 1}`, 1, 6),
+      birthInfo: str(p?.birthInfo, `생일 ${i + 1}`, 4, 40),
+      saju: saju(p?.saju, `사주 ${i + 1}`),
+      // 재설치 뒤 기기 기록을 되살리는 용도 (앱이 규칙 결과를 다시 계산한다)
+      birth: {
+        y: int(p?.birth?.y, `생일 ${i + 1}`, 1900, 2100),
+        m: int(p?.birth?.m, `생일 ${i + 1}`, 1, 12),
+        d: int(p?.birth?.d, `생일 ${i + 1}`, 1, 31),
+        h: int(p?.birth?.h, `생일 ${i + 1}`, -1, 23),
+      },
+    })),
+    rules: {
+      score: int(rules.score, "점수", 0, 100),
+      title: str(rules.title, "제목", 1, 60),
+      parts: list(rules.parts, "점수 근거", 6).map((x: any) => ({
+        label: str(x?.label, "점수 근거", 1, 40),
+        badge: str(x?.badge, "점수 근거", 0, 40),
+        points: int(x?.points, "점수 근거", 0, 30),
+        max: int(x?.max, "점수 근거", 1, 30),
+        text: str(x?.text, "점수 근거", 1, 600),
+      })),
+      tenGods: list(rules.tenGods, "십신", 2).map((x: any) => ({
+        from: str(x?.from, "십신", 1, 6),
+        to: str(x?.to, "십신", 1, 6),
+        name: str(x?.name, "십신", 2, 2),
+      })),
+    },
+  };
+}
+
+export async function handleCreatePair(deps: Deps, user: AuthUser, body: Record<string, unknown>) {
+  const deviceId = requireDeviceId(body.deviceId);
+  const input = parsePairInput(body);
+  const row = await deps.repo.insertResult({
+    user_id: user.id,
+    device_id: deviceId,
+    kind: "pair",
+    request_type: "pair",
+    input,
+    content: {},
+    is_free_trial: false,
+  });
+  return { result: viewOf(row) };
 }
 
 // ============================================================
@@ -297,6 +376,12 @@ async function deliver(deps: Deps, user: AuthUser, productId: ProductId, token: 
       await generateUpgrade(deps, row);
     }
   }
+  if (productId === "chemi_pair") {
+    const [row] = await deps.repo.getResults(user.id, resultIds);
+    if (row && !row.content.report) {
+      await generatePairReport(deps, row);
+    }
+  }
 
   await deps.repo.markDelivered(token);
   const rows = await deps.repo.getResults(user.id, resultIds);
@@ -318,5 +403,24 @@ async function generateUpgrade(deps: Deps, row: ResultRow) {
     ...row.content,
     improvementNames: [...(row.content.improvementNames ?? []), ...(json.names as unknown[])],
     upgraded: true,
+  });
+}
+
+/** 우리 케미 전체 리포트 (결제 검증 뒤 한 번). 실패하면 verify가 실패하고 앱은 소비하지 않아 다시 받는다 */
+async function generatePairReport(deps: Deps, row: ResultRow) {
+  const valid = (j: any) =>
+    Array.isArray(j.goodPoints) && j.goodPoints.length >= 3 &&
+    Array.isArray(j.clashPoints) && j.clashPoints.length >= 2 &&
+    typeof j.yearFlow === "string" && j.yearFlow.length > 0 &&
+    Array.isArray(j.advice) && j.advice.length >= 2;
+  const json = await generateJson(deps.llm, buildPairReportPrompt(row.input as any), valid, "pair_report");
+  await deps.repo.updateContent(row.id, {
+    ...row.content,
+    report: {
+      goodPoints: (json.goodPoints as unknown[]).slice(0, 3),
+      clashPoints: (json.clashPoints as unknown[]).slice(0, 2),
+      yearFlow: json.yearFlow,
+      advice: (json.advice as unknown[]).slice(0, 3),
+    },
   });
 }

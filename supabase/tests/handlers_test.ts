@@ -17,7 +17,7 @@ const USER = { id: "11111111-1111-1111-1111-111111111111" };
 const OTHER = { id: "22222222-2222-2222-2222-222222222222" };
 const DEVICE = "a1b2c3d4e5f60718";
 
-function setup(opts: { llm?: (p: string) => Promise<string>; purchases?: Record<string, PlayPurchase> } = {}) {
+function setup(opts: { llm?: (p: string, label?: string) => Promise<string>; purchases?: Record<string, PlayPurchase> } = {}) {
   const repo = new MemoryRepo();
   const llmCalls: string[] = [];
   const llmLabels: (string | undefined)[] = [];
@@ -260,4 +260,62 @@ Deno.test("한자 칸 정리: AI가 설명 문장을 붙여 보내도 한자만 
   assertEquals(onlyHanja("추정: 敏"), "");
   assertEquals(onlyHanja("敏秀"), "敏秀");
   assertEquals(onlyHanja(null), "");
+});
+
+// ============================================================
+// 우리 케미
+// ============================================================
+
+const pairBody = (over: Record<string, unknown> = {}) => ({
+  type: "pair",
+  deviceId: DEVICE,
+  relation: "lover",
+  people: [
+    { name: "민서", birthInfo: "1998-05-11 14시", saju: SAJU, birth: { y: 1998, m: 5, d: 11, h: 14 } },
+    { name: "지우", birthInfo: "1997-11-03 미상", saju: SAJU, birth: { y: 1997, m: 11, d: 3, h: -1 } },
+  ],
+  rules: {
+    score: 88,
+    title: "서로를 채워 주는 좋은 커플",
+    parts: [{ label: "일간 궁합", badge: "상생 · 살려 주는 사이", points: 15, max: 20, text: "해설" }],
+    tenGods: [{ from: "민서", to: "지우", name: "정관" }, { from: "지우", to: "민서", name: "정재" }],
+  },
+  ...over,
+});
+
+Deno.test("우리 케미: 결과 자리 만들기는 AI를 부르지 않고 미리보기 한도도 안 쓴다", async () => {
+  const { deps, repo, llmCalls } = setup();
+  const { result } = await handleGenerate(deps, USER, pairBody()) as any;
+  assertEquals(result.kind, "pair");
+  assertEquals(result.unlocked, false);
+  assertEquals(result.content, {});
+  assertEquals(llmCalls.length, 0);
+  assertEquals((await handleMe(deps, USER, { deviceId: DEVICE })).previewsLeft, 3);
+  assertEquals(repo.results[0].input.relation, "lover");
+});
+
+Deno.test("우리 케미: 형식이 틀리면 거절", async () => {
+  const { deps } = setup();
+  assertEquals(await code(handleGenerate(deps, USER, pairBody({ relation: "enemy" }))), "invalid_input");
+  assertEquals(await code(handleGenerate(deps, USER, pairBody({ people: [] }))), "invalid_input");
+});
+
+Deno.test("우리 케미: 결제 검증 뒤에만 AI 리포트, 같은 영수증을 다시 보내도 한 번만 생성", async () => {
+  const labels: (string | undefined)[] = [];
+  const report = { goodPoints: [1, 2, 3].map((i) => ({ title: `좋${i}`, body: "b" })), clashPoints: [1, 2].map((i) => ({ title: `충${i}`, body: "b" })), yearFlow: "흐름", advice: ["a", "b", "c"] };
+  const { deps } = setup({
+    llm: async (_p, label) => { labels.push(label); return JSON.stringify(report); },
+    purchases: { "tok-pair00000": paid() },
+  });
+  const { result } = await handleGenerate(deps, USER, pairBody()) as any;
+  assertEquals(await code(handlePrepare(deps, USER, { productId: "naming_new", resultIds: [result.id] })), "nothing_to_unlock");
+  await handlePrepare(deps, USER, { productId: "chemi_pair", resultIds: [result.id] });
+
+  const v = { productId: "chemi_pair", purchaseToken: "tok-pair00000", resultIds: [result.id] };
+  const first = await handleVerify(deps, USER, v);
+  assertEquals(first.results[0].unlocked, true);
+  assertEquals((first.results[0].content as any).report.goodPoints.length, 3);
+  await handleVerify(deps, USER, v);
+  assertEquals(labels, ["pair_report"]);
+  assertEquals(await code(handlePrepare(deps, USER, { productId: "chemi_pair", resultIds: [result.id] })), "nothing_to_unlock");
 });

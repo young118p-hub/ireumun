@@ -246,3 +246,50 @@ export function buildDiagnosisUpgradePrompt(body: Record<string, any>): string {
 중요: JSON만 출력. 이름 정확히 ${nameCount}개. 매번 다양하고 새로운 이름을 추천하세요. 이전에 추천했던 이름과 겹치지 않도록 창의적으로 작명하세요.`;
 }
 
+
+// ============================================================
+// 프롬프트: 우리 케미 전체 리포트 (결제 뒤)
+// 점수와 궁합 판정은 앱의 규칙표가 이미 정했다 → AI는 그 결과를 뒤집지 않고 구체적으로 풀어 쓴다.
+// ============================================================
+const RELATION_KO: Record<string, string> = { lover: "연인", friend: "친구", coworker: "동료" };
+
+export function buildPairReportPrompt(input: Record<string, any>): string {
+  const rel = RELATION_KO[input.relation] ?? "연인";
+  const [a, b] = input.people as any[];
+  const r = input.rules as any;
+  const person = (p: any) =>
+    `- ${p.name}: ${p.birthInfo} / 사주 ${p.saju.yearPillar} ${p.saju.monthPillar} ${p.saju.dayPillar} ${p.saju.hourPillar}` +
+    ` / 일간 ${p.saju.dayMaster} / 오행 목${p.saju.ohengBalance.목} 화${p.saju.ohengBalance.화} 토${p.saju.ohengBalance.토} 금${p.saju.ohengBalance.금} 수${p.saju.ohengBalance.수}`;
+  const parts = (r.parts as any[]).map((x) => `- ${x.label} (${x.points}/${x.max}점, ${x.badge}): ${x.text}`).join("\n");
+  const gods = (r.tenGods as any[]).map((g) => `- ${g.from}에게 ${g.to}는 ${g.name}`).join("\n");
+  const year = new Date().getFullYear();
+
+  return `당신은 사주명리학 궁합 전문가입니다. 두 사람(${rel} 사이)의 궁합 전체 리포트를 써 주세요.
+
+## 두 사람
+${person(a)}
+${person(b)}
+
+## 이미 계산된 궁합 (이 판정과 점수를 바꾸거나 반대로 말하지 마세요)
+- 케미 점수: ${r.score}점, "${r.title}"
+${parts}
+## 서로에게 어떤 사람인지 (십신)
+${gods}
+
+## 쓰는 법
+- ${rel} 관계에 맞는 상황으로 구체적으로 (예: 데이트·연락·여행·돈 쓰는 법·일하는 방식 등). 두 사람의 이름을 넣어서.
+- 위 판정을 근거로 들되, 사주 용어는 한 번씩 풀어서 설명. 겁주거나 단정하지 말고, 해결책을 함께.
+- 반말 아닌 부드러운 존댓말(해요체). 각 본문은 2~4문장.
+
+## 응답 형식 (반드시 JSON만)
+\`\`\`json
+{
+  "goodPoints": [{"title": "짧은 제목", "body": "본문"}, {"title": "", "body": ""}, {"title": "", "body": ""}],
+  "clashPoints": [{"title": "짧은 제목", "body": "본문 + 이렇게 해 보세요"}, {"title": "", "body": ""}],
+  "yearFlow": "${year}년 두 사람 관계의 흐름 (3~5문장, 계절이나 시기별로)",
+  "advice": ["둘을 위한 조언 1", "조언 2", "조언 3"]
+}
+\`\`\`
+
+중요: JSON만 출력. goodPoints 정확히 3개, clashPoints 정확히 2개, advice 3개.`;
+}
