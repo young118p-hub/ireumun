@@ -21,6 +21,17 @@ class ChemiColors {
   static const warn = Color(0xFFD1344A); // 문제점·삭제 (흰 바탕 4.5:1 이상)
 }
 
+/// 오행 색 (사주 카드와 같은 색. 흰 글씨를 올리지 않고 칩 바탕·막대에만 쓴다)
+const elementColors = {
+  '목': Color(0xFF00B894),
+  '화': Color(0xFFFF6B6B),
+  '토': Color(0xFFFDAC53),
+  '금': Color(0xFFB8B8B8),
+  '수': Color(0xFF0984E3),
+};
+
+const elementHanja = {'목': '木', '화': '火', '토': '土', '금': '金', '수': '水'};
+
 class ChemiFonts {
   ChemiFonts._();
   static const display = 'Jua';

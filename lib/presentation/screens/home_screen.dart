@@ -15,17 +15,31 @@ import '../providers/chemi_provider.dart';
 import '../providers/naming_provider.dart';
 import '../widgets/beaker.dart';
 import '../widgets/feed_card.dart';
+import '../widgets/status_scrim.dart';
 import 'diagnosis_input_screen.dart';
 import 'mbti_pick_screen.dart';
+import 'name_chemi_input_screen.dart';
 import 'naming_input_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   /// 내 결과 탭으로 (카드 "전체 보기")
   final VoidCallback onOpenAllResults;
 
   const HomeScreen({super.key, required this.onOpenAllResults});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   static const _feedLimit = 5;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   void _push(BuildContext context, Widget screen) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -38,67 +52,98 @@ class HomeScreen extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        body: ListView(
-          padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 100),
+        body: Stack(
           children: [
-            _Hero(
-              myMbti: chemi.myMbti,
-              onNameChemi: () => _push(context, const DiagnosisInputScreen()),
-              onMbti: (type) => _push(context, MbtiPickScreen(initialMe: type)),
-            ),
-            _SectionTitle(
-              title: feed.isEmpty ? '이런 결과가 나와요' : '내 실험 기록',
-              action: feed.isEmpty ? null : (label: '전체 보기', onTap: onOpenAllResults),
-            ),
-            SizedBox(
-              height: FeedCard.height,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                children: [
-                  if (feed.isEmpty) ...[
-                    _exampleMbti(context),
-                    const SizedBox(width: 10),
-                    _exampleNameChemi(context),
-                  ] else
-                    for (final (i, item) in feed.take(_feedLimit).indexed) ...[
-                      if (i > 0) const SizedBox(width: 10),
-                      FeedCard(item: item, onTap: () => item.open(context)),
-                    ],
-                ],
+            ListView(
+              controller: _scroll,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom + 100,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
-              child: Column(
-                children: [
-                  Row(
+              children: [
+                _Hero(
+                  myMbti: chemi.myMbti,
+                  onNameChemi: () =>
+                      _push(context, const DiagnosisInputScreen()),
+                  onMbti: (type) =>
+                      _push(context, MbtiPickScreen(initialMe: type)),
+                ),
+                _SectionTitle(
+                  title: feed.isEmpty ? '이런 결과가 나와요' : '내 실험 기록',
+                  action: feed.isEmpty
+                      ? null
+                      : (label: '전체 보기', onTap: widget.onOpenAllResults),
+                ),
+                SizedBox(
+                  height: FeedCard.height,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
                     children: [
-                      Expanded(child: _MenuTile(title: '우리 케미', enabled: Features.pairChemi, onTap: () {})),
-                      const SizedBox(width: 8),
-                      Expanded(child: _MenuTile(title: '가족 케미', enabled: Features.familyChemi, onTap: () {})),
+                      if (feed.isEmpty) ...[
+                        _exampleMbti(context),
+                        const SizedBox(width: 10),
+                        _exampleNameChemi(context),
+                      ] else
+                        for (final (i, item)
+                            in feed.take(_feedLimit).indexed) ...[
+                          if (i > 0) const SizedBox(width: 10),
+                          FeedCard(item: item, onTap: () => item.open(context)),
+                        ],
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: _MenuTile(title: '이름 케미', badge: '무료', enabled: Features.nameChemi, onTap: () {}),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MenuTile(
+                              title: '우리 케미',
+                              enabled: Features.pairChemi,
+                              onTap: () {},
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _MenuTile(
+                              title: '가족 케미',
+                              enabled: Features.familyChemi,
+                              onTap: () {},
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _MenuTile(
-                          title: '아기 이름 찾기',
-                          outlined: true,
-                          enabled: true,
-                          onTap: () => _push(context, const NamingInputScreen()),
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MenuTile(
+                              title: '이름 케미',
+                              badge: '무료',
+                              enabled: Features.nameChemi,
+                              onTap: () => _push(context, const NameChemiInputScreen()),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _MenuTile(
+                              title: '아기 이름 찾기',
+                              outlined: true,
+                              enabled: true,
+                              onTap: () =>
+                                  _push(context, const NamingInputScreen()),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            StatusScrim(controller: _scroll),
           ],
         ),
       ),
@@ -114,19 +159,22 @@ class HomeScreen extends StatelessWidget {
       score: c.score,
       summary: c.title,
       kind: FeedKind.mbti,
-      onTap: () => _push(context, const MbtiPickScreen(initialMe: 'INFP', initialYou: 'ENTJ')),
+      onTap: () => _push(
+        context,
+        const MbtiPickScreen(initialMe: 'INFP', initialYou: 'ENTJ'),
+      ),
     );
   }
 
   /// 내 이름 케미는 해 보기 전엔 점수를 모르니 숫자 대신 물음표
   Widget _exampleNameChemi(BuildContext context) => FeedCard.example(
-        label: '내 이름 케미',
-        headline: '내 사주 × 내 이름',
-        score: null,
-        summary: '몇 점일지 측정해 보기',
-        kind: FeedKind.nameChemi,
-        onTap: () => _push(context, const DiagnosisInputScreen()),
-      );
+    label: '내 이름 케미',
+    headline: '내 사주 × 내 이름',
+    score: null,
+    summary: '몇 점일지 측정해 보기',
+    kind: FeedKind.nameChemi,
+    onTap: () => _push(context, const DiagnosisInputScreen()),
+  );
 }
 
 class _Hero extends StatelessWidget {
@@ -134,7 +182,11 @@ class _Hero extends StatelessWidget {
   final VoidCallback onNameChemi;
   final ValueChanged<String?> onMbti;
 
-  const _Hero({required this.myMbti, required this.onNameChemi, required this.onMbti});
+  const _Hero({
+    required this.myMbti,
+    required this.onNameChemi,
+    required this.onMbti,
+  });
 
   /// MBTI 판에 바로 보이는 3개: 내 유형이 있으면 맨 앞
   List<String> get _quickTypes =>
@@ -169,7 +221,10 @@ class _Hero extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         shape: const StadiumBorder(),
                       ),
-                      child: Text('내 이름 케미부터', style: ChemiText.label(14, color: Colors.white)),
+                      child: Text(
+                        '내 이름 케미부터',
+                        style: ChemiText.label(14, color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -180,16 +235,24 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(22)),
+            decoration: BoxDecoration(
+              color: ChemiColors.ink,
+              borderRadius: BorderRadius.circular(22),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Text('MBTI 케미 · 무료', style: ChemiText.display(18, color: Colors.white)),
+                    Text(
+                      'MBTI 케미 · 무료',
+                      style: ChemiText.display(18, color: Colors.white),
+                    ),
                     const Spacer(),
-                    Text(myMbti == null ? '내 유형은?' : '내 유형 $myMbti',
-                        style: ChemiText.label(12, color: ChemiColors.mutedOnInk)),
+                    Text(
+                      myMbti == null ? '내 유형은?' : '내 유형 $myMbti',
+                      style: ChemiText.label(12, color: ChemiColors.mutedOnInk),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -242,8 +305,12 @@ class _MbtiCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = highlighted ? Colors.white : (outlined ? Colors.transparent : ChemiColors.inkSoft);
-    final fg = highlighted ? ChemiColors.ink : (outlined ? ChemiColors.mutedOnInk : Colors.white);
+    final bg = highlighted
+        ? Colors.white
+        : (outlined ? Colors.transparent : ChemiColors.inkSoft);
+    final fg = highlighted
+        ? ChemiColors.ink
+        : (outlined ? ChemiColors.mutedOnInk : Colors.white);
     return Semantics(
       button: true,
       label: semantics,
@@ -252,12 +319,19 @@ class _MbtiCell extends StatelessWidget {
         color: bg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: outlined ? const BorderSide(color: ChemiColors.inkLine) : BorderSide.none,
+          side: outlined
+              ? const BorderSide(color: ChemiColors.inkLine)
+              : BorderSide.none,
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
-          child: SizedBox(height: 44, child: Center(child: Text(text, style: ChemiText.label(13, color: fg)))),
+          child: SizedBox(
+            height: 44,
+            child: Center(
+              child: Text(text, style: ChemiText.label(13, color: fg)),
+            ),
+          ),
         ),
       ),
     );
@@ -271,20 +345,23 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 18, 12, 6),
-        child: Row(
-          children: [
-            Text(title, style: ChemiText.display(20)),
-            const Spacer(),
-            if (action != null)
-              TextButton(
-                onPressed: action!.onTap,
-                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                child: Text(action!.label, style: ChemiText.label(13, color: ChemiColors.muted)),
-              ),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(22, 18, 12, 6),
+    child: Row(
+      children: [
+        Text(title, style: ChemiText.display(20)),
+        const Spacer(),
+        if (action != null)
+          TextButton(
+            onPressed: action!.onTap,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: Text(
+              action!.label,
+              style: ChemiText.label(13, color: ChemiColors.muted),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _MenuTile extends StatelessWidget {
@@ -306,7 +383,9 @@ class _MenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      side: outlined ? const BorderSide(color: ChemiColors.disabled, width: 1.5) : BorderSide.none,
+      side: outlined
+          ? const BorderSide(color: ChemiColors.disabled, width: 1.5)
+          : BorderSide.none,
     );
     return Semantics(
       button: true,
@@ -314,7 +393,9 @@ class _MenuTile extends StatelessWidget {
       label: enabled ? title : '$title, 곧 열려요',
       excludeSemantics: true,
       child: Material(
-        color: outlined ? Colors.transparent : (enabled ? Colors.white : Colors.white.withValues(alpha: 0.5)),
+        color: outlined
+            ? Colors.transparent
+            : (enabled ? Colors.white : Colors.white.withValues(alpha: 0.5)),
         shape: shape,
         child: InkWell(
           customBorder: shape,
@@ -325,15 +406,26 @@ class _MenuTile extends StatelessWidget {
             child: Row(
               children: [
                 Flexible(
-                  child: Text(title,
-                      overflow: TextOverflow.ellipsis,
-                      style: ChemiText.label(14, color: enabled ? ChemiColors.ink : ChemiColors.muted)),
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: ChemiText.label(
+                      14,
+                      color: enabled ? ChemiColors.ink : ChemiColors.muted,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 6),
                 if (!enabled)
-                  Text('곧 열려요', style: ChemiText.label(11, color: ChemiColors.muted))
+                  Text(
+                    '곧 열려요',
+                    style: ChemiText.label(11, color: ChemiColors.muted),
+                  )
                 else if (badge != null)
-                  Text(badge!, style: ChemiText.label(13, color: ChemiColors.pinkDeep)),
+                  Text(
+                    badge!,
+                    style: ChemiText.label(13, color: ChemiColors.pinkDeep),
+                  ),
               ],
             ),
           ),

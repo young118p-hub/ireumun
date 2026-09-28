@@ -8,9 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/chemi_theme.dart';
 import '../../data/mbti/mbti_chemi.dart';
-import '../../data/services/share_service.dart';
 import '../providers/chemi_provider.dart';
+import '../../core/text/keep_words.dart';
 import '../widgets/beaker.dart';
+import '../widgets/result_parts.dart';
+import '../widgets/status_scrim.dart';
 import 'mbti_pick_screen.dart';
 
 class MbtiResultScreen extends StatefulWidget {
@@ -18,7 +20,12 @@ class MbtiResultScreen extends StatefulWidget {
   final String you;
   final bool record;
 
-  const MbtiResultScreen({super.key, required this.me, required this.you, this.record = true});
+  const MbtiResultScreen({
+    super.key,
+    required this.me,
+    required this.you,
+    this.record = true,
+  });
 
   @override
   State<MbtiResultScreen> createState() => _MbtiResultScreenState();
@@ -26,6 +33,13 @@ class MbtiResultScreen extends StatefulWidget {
 
 class _MbtiResultScreenState extends State<MbtiResultScreen> {
   late final MbtiChemi _chemi = mbtiChemi(widget.me, widget.you);
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -33,7 +47,8 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
     if (widget.record) {
       // 첫 프레임 뒤에 (build 중 notifyListeners 방지)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<ChemiProvider>().recordMbti(widget.me, widget.you);
+        if (mounted)
+          context.read<ChemiProvider>().recordMbti(widget.me, widget.you);
       });
     }
   }
@@ -55,8 +70,19 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: ChemiColors.chrome,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => _ShareSheet(chemi: _chemi),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => StoryShareSheet(
+        card: StoryCard(
+          label: 'MBTI 케미',
+          pair: '${_chemi.me} × ${_chemi.you}',
+          score: _chemi.score,
+          title: _chemi.title,
+          tags: _chemi.tags,
+        ),
+        shareText: '우리 MBTI 케미 ${_chemi.score}점! 너희는 몇 점? #케미연구소',
+      ),
     );
   }
 
@@ -70,96 +96,192 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
         body: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
+              child: Stack(
                 children: [
-                  Container(
-                    padding: EdgeInsets.fromLTRB(12, top + 4, 12, 22),
-                    decoration: const BoxDecoration(
-                      color: ChemiColors.pink,
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  ListView(
+                    controller: _scroll,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.fromLTRB(12, top + 4, 12, 22),
+                        decoration: const BoxDecoration(
+                          color: ChemiColors.pink,
+                          borderRadius: BorderRadius.vertical(
+                            bottom: Radius.circular(36),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            IconButton(
-                              tooltip: '뒤로',
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: ChemiColors.ink),
+                            Row(
+                              children: [
+                                IconButton(
+                                  tooltip: '뒤로',
+                                  onPressed: () => Navigator.pop(context),
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    size: 22,
+                                    color: ChemiColors.ink,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      'MBTI 케미',
+                                      style: ChemiText.label(14),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: '공유',
+                                  onPressed: _openShare,
+                                  icon: const Icon(
+                                    Icons.ios_share,
+                                    size: 22,
+                                    color: ChemiColors.ink,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Expanded(child: Center(child: Text('MBTI 케미', style: ChemiText.label(14)))),
-                            IconButton(
-                              tooltip: '공유',
-                              onPressed: _openShare,
-                              icon: const Icon(Icons.ios_share, size: 22, color: ChemiColors.ink),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Wrap(
+                                          spacing: 8,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            _TypeTag(c.me, dark: false),
+                                            Text(
+                                              '×',
+                                              style: ChemiText.display(26),
+                                            ),
+                                            _TypeTag(c.you, dark: true),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _Score(score: c.score, size: 88),
+                                        Text(
+                                          c.title,
+                                          style: ChemiText.display(
+                                            24,
+                                            height: 1.25,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${c.meProfile.nick} × ${c.youProfile.nick}',
+                                          style: ChemiText.label(13),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Beaker(
+                                    width: 76,
+                                    face: BeakerFace.happy,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      spacing: 8,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      children: [
-                                        _TypeTag(c.me, dark: false),
-                                        Text('×', style: ChemiText.display(26)),
-                                        _TypeTag(c.you, dark: true),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _Score(score: c.score, size: 88),
-                                    Text(c.title, style: ChemiText.display(24, height: 1.25)),
-                                  ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 16, 22, 16),
+                        child: Column(
+                          children: [
+                            _People(chemi: c),
+                            const SizedBox(height: 18),
+                            const SectionTitle(
+                              '케미 해부',
+                              sub: '네 가지 성향에서 받은 점수를 더하면 케미 점수',
+                            ),
+                            _Axes(chemi: c),
+                            const SizedBox(height: 18),
+                            const SectionTitle('상황별 케미'),
+                            _Situations(chemi: c),
+                            const SizedBox(height: 18),
+                            const SectionTitle('둘이 만나면'),
+                            TextCard(title: '잘 맞는 점', body: c.strength),
+                            const SizedBox(height: 10),
+                            TextCard(title: '부딪히는 순간', body: c.clash),
+                            const SizedBox(height: 10),
+                            TextCard(title: '대화 꿀팁', body: c.tip),
+                            const SizedBox(height: 18),
+                            const SectionTitle('서로에게 필요한 한마디'),
+                            _Quote(
+                              to: c.you,
+                              text: c.youProfile.wantsToHear,
+                              dark: true,
+                            ),
+                            const SizedBox(height: 8),
+                            _Quote(
+                              to: c.me,
+                              text: c.meProfile.wantsToHear,
+                              dark: false,
+                            ),
+                            const SizedBox(height: 18),
+                            SectionTitle(
+                              '${c.me}의 최고 케미 TOP 3',
+                              sub: '누르면 그 조합으로 볼 수 있어요',
+                            ),
+                            _TopMatches(
+                              me: c.me,
+                              current: c.you,
+                              onOpen: (you) => Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      MbtiResultScreen(me: c.me, you: you),
                                 ),
                               ),
-                              const Beaker(width: 76, face: BeakerFace.happy),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 16),
-                    child: Column(
-                      children: [
-                        _TextCard(title: '잘 맞는 점', body: c.strength),
-                        const SizedBox(height: 10),
-                        _TextCard(title: '부딪히는 순간', body: c.clash),
-                        const SizedBox(height: 10),
-                        _TextCard(title: '대화 꿀팁', body: c.tip),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: OutlinedButton(
-                            onPressed: _pickAgain,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: ChemiColors.ink,
-                              side: const BorderSide(color: ChemiColors.ink, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             ),
-                            child: Text('상대 바꿔서 다시 보기', style: ChemiText.label(15)),
-                          ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton(
+                                onPressed: _pickAgain,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: ChemiColors.ink,
+                                  side: const BorderSide(
+                                    color: ChemiColors.ink,
+                                    width: 1.5,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                child: Text(
+                                  '상대 바꿔서 다시 보기',
+                                  style: ChemiText.label(15),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'MBTI 케미는 네 가지 성향이 같은지 다른지로 계산한 재미용 결과예요.',
+                              textAlign: TextAlign.center,
+                              style: ChemiText.body(
+                                12,
+                                color: ChemiColors.muted,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'MBTI 케미는 네 가지 성향이 같은지 다른지로 계산한 재미용 결과예요.',
-                          textAlign: TextAlign.center,
-                          style: ChemiText.body(12, color: ChemiColors.muted),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  StatusScrim(controller: _scroll),
                 ],
               ),
             ),
@@ -194,12 +316,14 @@ class _Score extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text.rich(
-        TextSpan(children: [
-          TextSpan(text: '$score', style: ChemiText.display(size, height: 1.0)),
-          TextSpan(text: '점', style: ChemiText.display(size * 0.32)),
-        ]),
-        semanticsLabel: '$score점',
-      );
+    TextSpan(
+      children: [
+        TextSpan(text: '$score', style: ChemiText.display(size, height: 1.0)),
+        TextSpan(text: '점', style: ChemiText.display(size * 0.32)),
+      ],
+    ),
+    semanticsLabel: '$score점',
+  );
 }
 
 class _TypeTag extends StatelessWidget {
@@ -209,183 +333,303 @@ class _TypeTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: dark ? ChemiColors.ink : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Text(type, style: ChemiText.display(26, color: dark ? Colors.white : ChemiColors.ink)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    decoration: BoxDecoration(
+      color: dark ? ChemiColors.ink : Colors.white,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Text(
+      type,
+      style: ChemiText.display(
+        26,
+        color: dark ? Colors.white : ChemiColors.ink,
+      ),
+    ),
+  );
 }
 
-class _TextCard extends StatelessWidget {
-  final String title;
-  final String body;
-  const _TextCard({required this.title, required this.body});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        decoration: BoxDecoration(color: ChemiColors.card, borderRadius: BorderRadius.circular(22)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: ChemiText.display(17)),
-            const SizedBox(height: 6),
-            Text(body, style: ChemiText.body(14, color: const Color(0xFF3A3A44), height: 1.55)),
-          ],
-        ),
-      );
-}
-
-/// 공유 전 미리보기: 이 카드를 그대로 이미지로 만든다
-class _ShareSheet extends StatefulWidget {
+/// 두 사람 캐릭터: 별명, 한 줄 특징, 연애 스타일
+class _People extends StatelessWidget {
   final MbtiChemi chemi;
-  const _ShareSheet({required this.chemi});
+  const _People({required this.chemi});
 
-  @override
-  State<_ShareSheet> createState() => _ShareSheetState();
-}
-
-class _ShareSheetState extends State<_ShareSheet> {
-  final _cardKey = GlobalKey();
-  bool _busy = false;
-
-  /// 이미지 만들기 → 공유 창이 뜰 때까지 버튼에 로딩 표시 (느린 폰에서 2초 넘게 걸림)
-  /// → 공유를 마치면 이 미리보기 창도 닫는다
-  Future<void> _share() async {
-    setState(() => _busy = true);
-    final bytes = await ShareService.captureWidget(_cardKey);
-    final shared = bytes != null &&
-        await ShareService.shareImage(
-          bytes,
-          text: '우리 MBTI 케미 ${widget.chemi.score}점! 너희는 몇 점? #케미연구소',
-        );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (shared) {
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('공유 창을 열지 못했어요. 다시 시도해 주세요.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = widget.chemi;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: ChemiColors.disabled, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 14),
-            // 9:16 스토리 카드
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
-              child: AspectRatio(
-                aspectRatio: 9 / 16,
-                child: RepaintBoundary(
-                  key: _cardKey,
-                  child: _StoryCard(chemi: c),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _busy ? null : _share,
-                child: _busy
-                    ? const SizedBox(
-                        width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                    : Text('공유하기', style: ChemiText.label(16, color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
+  Widget _card(String type, MbtiProfile p, bool dark) {
+    final fg = dark ? Colors.white : ChemiColors.ink;
+    final sub = dark ? ChemiColors.mutedOnInk : ChemiColors.muted;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: dark ? ChemiColors.ink : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(type, style: ChemiText.label(12, color: sub)),
+          Text(p.nick, style: ChemiText.display(19, color: fg)),
+          const SizedBox(height: 6),
+          Text(
+            keepWords(p.vibe),
+            style: ChemiText.body(13, color: fg, height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          Text('연애할 땐', style: ChemiText.label(11, color: sub)),
+          Text(
+            keepWords(p.love),
+            style: ChemiText.body(13, color: fg, height: 1.45),
+          ),
+        ],
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) => IntrinsicHeight(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _card(chemi.me, chemi.meProfile, false)),
+        const SizedBox(width: 8),
+        Expanded(child: _card(chemi.you, chemi.youProfile, true)),
+      ],
+    ),
+  );
 }
 
-class _StoryCard extends StatelessWidget {
+/// 케미 해부: 축마다 받은 점수 막대 + 판정 + 설명
+class _Axes extends StatelessWidget {
   final MbtiChemi chemi;
-  const _StoryCard({required this.chemi});
+  const _Axes({required this.chemi});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+    ),
+    child: Column(
+      children: [
+        for (final (i, a) in chemi.axes.indexed) ...[
+          if (i > 0) const Divider(height: 1, color: ChemiColors.chrome),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(a.label, style: ChemiText.display(16)),
+                    const SizedBox(width: 6),
+                    Text(
+                      a.letters,
+                      style: ChemiText.label(12, color: ChemiColors.muted),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: a.verdict == '찰떡'
+                            ? ChemiColors.pink
+                            : ChemiColors.chrome,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(a.verdict, style: ChemiText.label(11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('+${a.points}', style: ChemiText.label(13)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: a.max == 0 ? 0 : a.points / a.max,
+                    minHeight: 8,
+                    backgroundColor: ChemiColors.chrome,
+                    color: ChemiColors.ink,
+                    semanticsLabel: '${a.label} ${a.max}점 중 ${a.points}점',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  keepWords(a.text),
+                  style: ChemiText.body(
+                    13,
+                    color: const Color(0xFF3A3A44),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+/// 상황별 케미: 연애 / 우정 / 일
+class _Situations extends StatelessWidget {
+  final MbtiChemi chemi;
+  const _Situations({required this.chemi});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (final (label, text) in [
+        ('연애', chemi.love),
+        ('우정', chemi.friend),
+        ('일', chemi.work),
+      ]) ...[
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  color: ChemiColors.pink,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                alignment: Alignment.center,
+                child: Text(label, style: ChemiText.label(12)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  keepWords(text),
+                  style: ChemiText.body(14, height: 1.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
+/// "ENTJ에게 해 주면 좋은 말" 말풍선
+class _Quote extends StatelessWidget {
+  final String to;
+  final String text;
+  final bool dark;
+  const _Quote({required this.to, required this.text, required this.dark});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+    decoration: BoxDecoration(
+      color: dark ? ChemiColors.ink : Colors.white,
+      borderRadius: BorderRadius.circular(
+        22,
+      ).copyWith(bottomLeft: const Radius.circular(6)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$to에게 해 주면 좋은 말',
+          style: ChemiText.label(
+            12,
+            color: dark ? ChemiColors.mutedOnInk : ChemiColors.muted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '“$text”',
+          style: ChemiText.display(
+            20,
+            color: dark ? Colors.white : ChemiColors.ink,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// 내 유형의 최고 케미 3개. 지금 보고 있는 조합이면 표시만 하고 누를 수 없다.
+class _TopMatches extends StatelessWidget {
+  final String me;
+  final String current;
+  final ValueChanged<String> onOpen;
+  const _TopMatches({
+    required this.me,
+    required this.current,
+    required this.onOpen,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final c = chemi;
-    return LayoutBuilder(builder: (context, box) {
-      final u = box.maxWidth / 390; // 시안(390 폭) 기준 비율
-      return Container(
-        color: ChemiColors.pink,
-        padding: EdgeInsets.fromLTRB(28 * u, 32 * u, 28 * u, 28 * u),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('케미연구소', style: ChemiText.display(24 * u)),
-                const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 11 * u, vertical: 6 * u),
-                  decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(999)),
-                  child: Text('MBTI 케미', style: ChemiText.label(12 * u, color: Colors.white)),
-                ),
-              ],
-            ),
-            const Spacer(),
-            Text('${c.me} × ${c.you}', style: ChemiText.display(36 * u)),
-            Text.rich(TextSpan(children: [
-              TextSpan(text: '${c.score}', style: ChemiText.display(140 * u, height: 1.0)),
-              TextSpan(text: '점', style: ChemiText.display(40 * u)),
-            ])),
-            Text(c.title, style: ChemiText.display(28 * u, height: 1.25)),
-            SizedBox(height: 14 * u),
-            Wrap(
-              spacing: 6 * u,
-              runSpacing: 6 * u,
-              children: [
-                for (final (i, t) in c.tags.indexed)
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12 * u, vertical: 6 * u),
-                    decoration: BoxDecoration(
-                      color: i == 0 ? Colors.white : ChemiColors.ink,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(t, style: ChemiText.label(13 * u, color: i == 0 ? ChemiColors.ink : Colors.white)),
-                  ),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    final top = bestMatches(me);
+    return Column(
+      children: [
+        for (final (i, m) in top.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: m.you == current ? ChemiColors.pink : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: m.you == current ? null : () => onOpen(m.you),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                  child: Row(
                     children: [
-                      Text('너희 케미는 몇 점?', style: ChemiText.label(12 * u)),
-                      Text('케미연구소에서 측정하기', style: ChemiText.display(20 * u)),
+                      Text('${i + 1}', style: ChemiText.display(24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${m.you} · ${m.youProfile.nick}',
+                              style: ChemiText.display(17),
+                            ),
+                            Text(
+                              m.title,
+                              style: ChemiText.body(
+                                12,
+                                color: m.you == current
+                                    ? ChemiColors.ink
+                                    : ChemiColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text('${m.score}점', style: ChemiText.display(20)),
+                      const SizedBox(width: 4),
+                      m.you == current
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text('지금', style: ChemiText.label(11)),
+                            )
+                          : const Icon(
+                              Icons.chevron_right,
+                              color: ChemiColors.muted,
+                            ),
                     ],
                   ),
                 ),
-                Beaker(width: 88 * u, face: BeakerFace.wink),
-              ],
+              ),
             ),
-          ],
-        ),
-      );
-    });
+          ),
+      ],
+    );
   }
 }

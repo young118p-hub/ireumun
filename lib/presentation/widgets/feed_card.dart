@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme/chemi_theme.dart';
+import '../../core/text/keep_words.dart';
 import '../feed.dart';
 
 class FeedCard extends StatelessWidget {
@@ -41,6 +42,7 @@ class FeedCard extends StatelessWidget {
 
   (Color bg, Color fg, Color sub) get _colors => switch (kind) {
         FeedKind.mbti => (ChemiColors.pink, ChemiColors.ink, ChemiColors.ink),
+        FeedKind.nameMatch => (const Color(0xFFFFD1E7), ChemiColors.ink, ChemiColors.ink),
         FeedKind.nameChemi => (Colors.white, ChemiColors.ink, ChemiColors.muted),
         FeedKind.babyName => (ChemiColors.ink, Colors.white, ChemiColors.mutedOnInk),
       };
@@ -103,7 +105,7 @@ class FeedCard extends StatelessWidget {
                       ]),
                     ),
                     const SizedBox(height: 4),
-                    Text(summary,
+                    Text(keepWords(summary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: ChemiText.label(12, color: fg).copyWith(height: 1.35)),

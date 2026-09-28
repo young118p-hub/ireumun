@@ -6,5 +6,5 @@ class Features {
 
   static const pairChemi = false; // 우리 케미 (연인·친구·동료)
   static const familyChemi = false; // 가족 케미
-  static const nameChemi = false; // 이름 케미 (두 이름 획수)
+  static const nameChemi = true; // 이름 케미 (두 이름 소리 오행, 무료)
 }
