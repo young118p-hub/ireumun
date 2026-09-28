@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import '../../core/text/keep_words.dart';
 import '../../core/theme/chemi_theme.dart';
+import '../../data/chemi_common/improve.dart';
+import '../../data/pair_chemi/pair_chemi.dart' show PairPerson;
+import '../../data/chemi_common/who.dart';
 import '../../data/services/share_service.dart';
 import 'beaker.dart';
 
@@ -217,8 +220,9 @@ void openStoryShare(BuildContext context, {required Widget card, required String
 /// "생일까지 넣으면 진짜 케미" → 우리 케미 입력 (MBTI·이름 케미 결과 아래)
 class PairChemiLink extends StatelessWidget {
   final String lead; // "MBTI는 성격, 사주는 타고난 기운"
+  final String headline;
   final VoidCallback onTap;
-  const PairChemiLink({super.key, required this.lead, required this.onTap});
+  const PairChemiLink({super.key, required this.lead, required this.onTap, this.headline = '생일까지 넣으면\n진짜 케미가 나와요'});
 
   @override
   Widget build(BuildContext context) => Material(
@@ -239,7 +243,7 @@ class PairChemiLink extends StatelessWidget {
                     children: [
                       Text(lead, style: ChemiText.label(12, color: ChemiColors.pink)),
                       const SizedBox(height: 2),
-                      Text('생일까지 넣으면\n진짜 케미가 나와요', style: ChemiText.display(18, color: Colors.white)),
+                      Text(headline, style: ChemiText.display(18, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -249,4 +253,195 @@ class PairChemiLink extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// 둘 중 누가? — 이긴 쪽 이름을 크게, 근거를 작게. 비기면 "막상막하"
+class WhoSection extends StatelessWidget {
+  final List<WhoAnswer> items;
+  final String tie; // 비겼을 때 알약 글자
+  const WhoSection({super.key, required this.items, this.tie = '막상막하'});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+        child: Column(
+          children: [
+            for (final (i, w) in items.indexed) ...[
+              if (i > 0) const Divider(height: 1, color: ChemiColors.chrome),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(w.question, style: ChemiText.label(14)),
+                          const SizedBox(height: 2),
+                          Text(keepWords(w.reason), style: ChemiText.body(12, color: ChemiColors.muted)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: w.winner == null ? ChemiColors.chrome : ChemiColors.pink,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(w.winner ?? tie, style: ChemiText.display(16)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+}
+
+/// 케미 올리는 법 — 번호 + 노력할 점 + 이렇게 해 보세요
+class ImproveSection extends StatelessWidget {
+  final List<Improve> items;
+  const ImproveSection({super.key, required this.items});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          for (final (i, it) in items.indexed) ...[
+            if (i > 0) const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: ChemiColors.ink, shape: BoxShape.circle),
+                    child: Text('${i + 1}', style: ChemiText.display(15, color: ChemiColors.pink)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(keepWords(it.title), style: ChemiText.display(16)),
+                        const SizedBox(height: 4),
+                        Text(keepWords(it.action), style: ChemiText.body(14, color: const Color(0xFF3A3A44), height: 1.55)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+}
+
+/// 결제 전: 전체 리포트에 무엇이 있는지 + 결제 버튼
+class LockedReport extends StatelessWidget {
+  final String sub;
+  final List<String> items;
+  final String price;
+  final bool busy;
+  final String? status;
+  final VoidCallback onBuy;
+  const LockedReport({super.key, required this.sub, required this.items, required this.price, required this.busy, required this.status, required this.onBuy});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(24)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('전체 리포트', style: ChemiText.display(20, color: Colors.white)),
+                const Spacer(),
+                const Icon(Icons.lock_outline, color: ChemiColors.pink, size: 20),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(keepWords(sub),
+                style: ChemiText.body(13, color: ChemiColors.mutedOnInk)),
+            const SizedBox(height: 12),
+            for (final t in items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check, size: 16, color: ChemiColors.pink),
+                    const SizedBox(width: 8),
+                    Text(t, style: ChemiText.label(14, color: Colors.white)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: busy ? null : onBuy,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ChemiColors.pink,
+                  foregroundColor: ChemiColors.ink,
+                  disabledBackgroundColor: ChemiColors.inkSoft,
+                ),
+                child: busy
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2, color: ChemiColors.pink),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(status ?? '결제 준비 중…', style: ChemiText.label(14, color: Colors.white)),
+                        ],
+                      )
+                    : Text('$price 전체 리포트 열기', style: ChemiText.label(16)),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+/// 나는 이런 사람: 일간 성격
+class PersonaCard extends StatelessWidget {
+  final PairPerson person;
+  final String? label; // 위 작은 글씨 (기본: 이름 · 일간)
+  final bool dark;
+  const PersonaCard({super.key, required this.person, this.dark = false, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final (name, symbol, text) = person.persona;
+    final fg = dark ? Colors.white : ChemiColors.ink;
+    final sub = dark ? ChemiColors.mutedOnInk : ChemiColors.muted;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: dark ? ChemiColors.ink : Colors.white, borderRadius: BorderRadius.circular(22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label ?? '${person.name} · $name', style: ChemiText.label(12, color: sub)),
+          Text(symbol, style: ChemiText.display(22, color: fg)),
+          const SizedBox(height: 6),
+          Text(keepWords(text), style: ChemiText.body(14, color: fg, height: 1.55)),
+        ],
+      ),
+    );
+  }
 }

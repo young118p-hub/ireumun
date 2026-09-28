@@ -293,3 +293,49 @@ ${gods}
 
 중요: JSON만 출력. goodPoints 정확히 3개, clashPoints 정확히 2개, advice 3개.`;
 }
+
+
+// ============================================================
+// 프롬프트: 가족 케미 전체 리포트 (결제 뒤)
+// 가족 점수·두 사람씩 점수는 앱의 규칙표가 이미 정했다 → AI는 뒤집지 않고 구체적으로 풀어 쓴다.
+// ============================================================
+export function buildFamilyReportPrompt(input: Record<string, any>): string {
+  const people = input.people as any[];
+  const r = input.rules as any;
+  const person = (p: any) =>
+    `- ${p.name} (${p.roleLabel}): ${p.birthInfo} / 사주 ${p.saju.yearPillar} ${p.saju.monthPillar} ${p.saju.dayPillar} ${p.saju.hourPillar}` +
+    ` / 일간 ${p.saju.dayMaster} / 오행 목${p.saju.ohengBalance.목} 화${p.saju.ohengBalance.화} 토${p.saju.ohengBalance.토} 금${p.saju.ohengBalance.금} 수${p.saju.ohengBalance.수}`;
+  const pairs = (r.pairs as any[]).map((x) => `- ${x.a} × ${x.b}: ${x.score}점, "${x.title}"`).join("\n");
+  const o = r.oheng as Record<string, number>;
+  const missing = (r.missing as string[]).length ? `없는 오행: ${(r.missing as string[]).join(", ")}` : "다섯 오행이 모두 있음";
+  const year = new Date().getFullYear();
+  const names = people.map((p) => `"${p.name}"`).join(", ");
+
+  return `당신은 사주명리학 가족 궁합 전문가입니다. 이 가족(${people.length}명)의 가족 케미 전체 리포트를 써 주세요.
+
+## 가족
+${people.map(person).join("\n")}
+
+## 이미 계산된 결과 (이 판정과 점수를 바꾸거나 반대로 말하지 마세요)
+- 가족 케미 점수: ${r.score}점, "${r.title}"
+- 가족 전체 오행: 목${o.목} 화${o.화} 토${o.토} 금${o.금} 수${o.수} (${missing})
+## 두 사람씩 본 케미
+${pairs}
+
+## 쓰는 법
+- 가족 일상 상황으로 구체적으로 (예: 식사 자리·명절·여행·집안일·용돈·연락). 이름을 넣어서.
+- 위 판정을 근거로 들되, 사주 용어는 한 번씩 풀어서 설명. 겁주거나 단정하지 말고, 해결책을 함께.
+- 반말 아닌 부드러운 존댓말(해요체). 각 본문은 2~4문장.
+
+## 응답 형식 (반드시 JSON만)
+\`\`\`json
+{
+  "strengths": [{"title": "짧은 제목", "body": "본문"}, {"title": "", "body": ""}, {"title": "", "body": ""}],
+  "cautions": [{"title": "짧은 제목", "body": "본문 + 이렇게 해 보세요"}, {"title": "", "body": ""}],
+  "members": [{"name": "가족 이름", "body": "이 사람이 가족 안에서 맡는 모습과, 가족에게 해 주면 좋은 것 (2~3문장)"}],
+  "yearFlow": "${year}년 우리 가족의 흐름 (3~5문장, 계절이나 시기별로)"
+}
+\`\`\`
+
+중요: JSON만 출력. strengths 정확히 3개, cautions 정확히 2개, members는 ${names} 순서대로 정확히 ${people.length}개.`;
+}

@@ -218,7 +218,12 @@ class _MbtiResultScreenState extends State<MbtiResultScreen> {
                             const SizedBox(height: 10),
                             TextCard(title: '부딪히는 순간', body: c.clash),
                             const SizedBox(height: 10),
-                            TextCard(title: '대화 꿀팁', body: c.tip),
+                            const SizedBox(height: 18),
+                            const SectionTitle('둘 중 누가?', sub: '네 글자로 맞혀 보는 두 사람의 모습'),
+                            WhoSection(items: c.who),
+                            const SizedBox(height: 18),
+                            const SectionTitle('케미 올리는 법', sub: '점수가 낮은 성향부터'),
+                            ImproveSection(items: c.improves),
                             const SizedBox(height: 18),
                             const SectionTitle('서로에게 필요한 한마디'),
                             _Quote(

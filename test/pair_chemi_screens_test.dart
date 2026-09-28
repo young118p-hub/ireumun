@@ -13,6 +13,7 @@ import 'package:chemilab/data/mbti/mbti_history.dart';
 import 'package:chemilab/data/models/birth_value.dart';
 import 'package:chemilab/data/name_chemi/name_chemi_history.dart';
 import 'package:chemilab/data/pair_chemi/pair_chemi.dart';
+import 'package:chemilab/data/family_chemi/family_chemi_history.dart';
 import 'package:chemilab/data/pair_chemi/pair_chemi_history.dart';
 import 'package:chemilab/data/services/purchase_service.dart';
 import 'package:chemilab/data/services/result_storage_service.dart';
@@ -56,7 +57,7 @@ void main() {
       naming = NamingProvider(purchaseService: purchases, storageService: storage, api: api);
       final prefs = await SharedPreferences.getInstance();
       final history = PairChemiHistory(prefs);
-      chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), history, api: api);
+      chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), history, FamilyChemiHistory(prefs), api: api);
       if (paid) {
         await history.add(PairChemiRecord(
           a: me,
@@ -96,7 +97,10 @@ void main() {
     await tester.pumpWidget(app(chemi, naming));
     await tester.pumpAndSettle();
     expect(find.textContaining('전체 리포트 열기'), findsOneWidget);
-    for (var i = 1; i <= 4; i++) {
+    expect(find.text('나는 이런 사람'), findsOneWidget);
+    expect(find.text('둘 중 누가?'), findsOneWidget);
+    expect(find.text('케미 올리는 법'), findsOneWidget);
+    for (var i = 1; i <= 6; i++) {
       await expectLater(find.byType(PairChemiResultScreen), matchesGoldenFile('goldens/pair_free_$i.png'));
       await tester.drag(find.byType(ListView).first, const Offset(0, -760));
       await tester.pumpAndSettle();
@@ -108,7 +112,7 @@ void main() {
     final (chemi, naming) = await providers(tester, paid: true);
     await tester.pumpWidget(app(chemi, naming));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, -2400));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -4300));
     await tester.pumpAndSettle();
     expect(find.text('잘 맞는 점 · 좋1'), findsOneWidget);
     expect(find.textContaining('전체 리포트 열기'), findsNothing);

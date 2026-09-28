@@ -25,8 +25,8 @@ class NamingProvider extends ChangeNotifier {
   /// 화면 어디서든 띄우는 안내 (결제 완료·취소 등). main에서 스낵바로 연결.
   void Function(String message)? onNotice;
 
-  /// 우리 케미 서버 결과 (동기화·결제 완료). 작명·진단 저장소가 아니라 케미 기록이 받는다. main에서 연결.
-  Future<void> Function(RemoteResult result)? onPairResult;
+  /// 우리 케미·가족 케미 서버 결과 (동기화·결제 완료). 작명·진단 저장소가 아니라 케미 기록이 받는다. main에서 연결.
+  Future<void> Function(RemoteResult result)? onChemiResult;
 
   NamingProvider({
     required this.purchaseService,
@@ -114,8 +114,8 @@ class NamingProvider extends ChangeNotifier {
       _previewsLeft = me.previewsLeft;
       await prefs.setBool(_freeTrialKey, me.freeTrialAvailable);
       for (final r in me.results) {
-        if (r.isPair) {
-          await onPairResult?.call(r);
+        if (r.isChemi) {
+          await onChemiResult?.call(r);
           continue;
         }
         if (r.kind == null || storageService.isHidden(r.id)) continue; // 모르는 종류는 건너뜀
@@ -224,7 +224,8 @@ class NamingProvider extends ChangeNotifier {
         final d = storageService.getUnpaid(SavedResultType.diagnosis);
         return n != null && d != null ? [n.id, d.id] : const [];
       case ProductType.pairChemi:
-        return const []; // 우리 케미는 결과 ID를 직접 넘긴다 (purchaseResults)
+      case ProductType.familyChemi:
+        return const []; // 우리·가족 케미는 결과 ID를 직접 넘긴다 (purchaseResults)
       case ProductType.diagnosisUpgrade:
         final d = _diagnosis;
         return d != null && d.isPaid && !d.hasDiagnosisUpgrade
@@ -268,8 +269,8 @@ class NamingProvider extends ChangeNotifier {
   /// 검증된 결제 결과를 기기에 저장 (이게 끝나야 구매가 소비된다)
   Future<void> _onDelivered(ProductType type, List<RemoteResult> results) async {
     for (final r in results) {
-      if (r.isPair) {
-        await onPairResult?.call(r);
+      if (r.isChemi) {
+        await onChemiResult?.call(r);
       } else if (r.kind != null) {
         await _store(r);
       }

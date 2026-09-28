@@ -18,6 +18,26 @@ import 'purchase_service_test.dart' show FakeBilling, purchase;
 
 const _input = SajuInput(year: 2024, month: 2, day: 4, hour: 10, gender: Gender.male, surname: '김');
 
+const familyReport = {
+  'report': {
+    'strengths': [
+      {'title': '강1', 'body': 'b'},
+      {'title': '강2', 'body': 'b'},
+      {'title': '강3', 'body': 'b'},
+    ],
+    'cautions': [
+      {'title': '주1', 'body': 'b'},
+      {'title': '주2', 'body': 'b'},
+    ],
+    'members': [
+      {'name': '민서', 'body': 'b'},
+      {'name': '엄마', 'body': 'b'},
+      {'name': '아빠', 'body': 'b'},
+    ],
+    'yearFlow': '흐름',
+  },
+};
+
 Map<String, dynamic> _names(int n) => {
       'babySaju': {'yearPillar': '계묘', 'ohengBalance': {'목': 1}},
       'names': List.generate(n, (i) => {'name': '이름$i', 'hanja': '漢字', 'score': 90}),
@@ -95,13 +115,14 @@ class ServerApi implements Api {
   @override
   Future<RemoteResult> generate(Map<String, dynamic> body) async {
     await ensureSignedIn();
-    if (body['type'] == 'pair') {
+    if (body['type'] == 'pair' || body['type'] == 'family') {
+      final type = body['type'] as String;
       final r = RemoteResult(
-        id: 'p${seq++}',
+        id: '${type[0]}${seq++}',
         kind: null,
-        kindName: 'pair',
-        requestType: 'pair',
-        input: {'relation': body['relation'], 'people': body['people']},
+        kindName: type,
+        requestType: type,
+        input: {if (body['relation'] != null) 'relation': body['relation'], 'people': body['people']},
         isFreeTrial: false,
         paidProducts: const [],
         unlocked: false,
@@ -157,7 +178,11 @@ class ServerApi implements Api {
           unlocked: true,
           lockedCount: 0,
           createdAt: results[id]!.createdAt,
-          content: results[id]!.isPair ? pairReport : results[id]!.content,
+          content: results[id]!.isPair
+              ? pairReport
+              : results[id]!.isFamily
+                  ? familyReport
+                  : results[id]!.content,
         ),
     ];
   }

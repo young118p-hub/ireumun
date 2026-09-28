@@ -9,14 +9,22 @@
 import '../../core/constants/saju_constants.dart';
 import '../../core/text/josa.dart';
 import '../services/saju_calculator.dart';
+import '../chemi_common/improve.dart';
+import '../chemi_common/who.dart';
 import 'pair_chemi_content.dart';
 
 export 'pair_chemi_content.dart' show tenGodTexts;
+export '../chemi_common/improve.dart' show Improve;
+export '../chemi_common/who.dart' show WhoAnswer;
 
 enum PairRelation {
   lover('연인', '커플'),
   friend('친구', '친구'),
-  coworker('동료', '팀');
+  coworker('동료', '팀'),
+  family('가족', '가족'); // 가족 케미 안의 두 사람 (우리 케미 입력 화면에는 나오지 않는다)
+
+  /// 우리 케미에서 고를 수 있는 관계
+  static const pickable = [lover, friend, coworker];
 
   const PairRelation(this.label, this.noun);
   final String label;
@@ -35,6 +43,12 @@ class PairPerson {
   int get yearBranch => SajuConstants.jiji.indexOf(saju.yearPillar[1]);
   int? get hourBranch => hourKnown ? SajuConstants.jiji.indexOf(saju.hourPillar[1]) : null;
   String get animal => SajuConstants.jijiAnimal[yearBranch];
+
+  /// 나는 이런 사람: (일간 이름, 상징, 성격 + 기운 세기)
+  (String, String, String) get persona {
+    final (name, symbol, text) = stemPersonas[saju.dayPillar[0]]!;
+    return (name, symbol, '$text ${saju.isDayMasterStrong ? strengthNote.$1 : strengthNote.$2}');
+  }
 }
 
 class PairPart {
@@ -44,8 +58,9 @@ class PairPart {
   final int max;
   final String text;
   final bool known; // 시간을 몰라 중간 점수를 준 항목이면 false
+  final String code; // 케미 올리는 법을 고르는 키 (stem:clash, branch:wonjin, comp …)
 
-  const PairPart(this.label, this.badge, this.points, this.max, this.text, {this.known = true});
+  const PairPart(this.label, this.badge, this.points, this.max, this.text, {this.known = true, this.code = ''});
 }
 
 class TenGodView {
@@ -65,6 +80,8 @@ class PairChemi {
   final List<PairPart> parts;
   final List<TenGodView> tenGods; // a가 보는 b, b가 보는 a
   final bool stemHarmony;
+  final List<Improve> improves; // 케미 올리는 법 (약한 항목부터 최대 3개)
+  final List<WhoAnswer> who; // 둘 중 누가?
 
   const PairChemi({
     required this.a,
@@ -74,6 +91,8 @@ class PairChemi {
     required this.parts,
     required this.tenGods,
     required this.stemHarmony,
+    required this.improves,
+    required this.who,
   });
 
   static const base = 45;
@@ -194,15 +213,16 @@ PairPart _dayStemPart(PairPerson a, PairPerson b) {
 
   if ((x - y).abs() == 5) {
     final (t, body) = stemHarmonyTexts[key]!;
-    return PairPart('일간 궁합', '$t · 찰떡', 20, 20, body);
+    return PairPart('일간 궁합', '$t · 찰떡', 20, 20, body, code: 'stem:harmony');
   }
   if ((x - y).abs() == 6 && (x < 4 || y < 4)) {
     final (t, body) = stemClashTexts[key]!;
-    return PairPart('일간 궁합', '$t · 주의', 2, 20, body);
+    return PairPart('일간 궁합', '$t · 주의', 2, 20, body, code: 'stem:clash');
   }
   if (ex == ey) {
     return PairPart('일간 궁합', '비화 · 닮은 기운', 10, 20,
-        '둘 다 ${_elName[ex]}(${_elHanja[ex]}) 기운($sx·$sy)이에요. 생각과 속도가 비슷해서 편하지만, 부딪히면 둘 다 물러서지 않아요. 양보하는 순서를 정해 두면 좋아요.');
+        '둘 다 ${_elName[ex]}(${_elHanja[ex]}) 기운($sx·$sy)이에요. 생각과 속도가 비슷해서 편하지만, 부딪히면 둘 다 물러서지 않아요. 양보하는 순서를 정해 두면 좋아요.',
+        code: 'stem:same');
   }
   final (giver, taker, gs, ts) = (ex + 1) % 5 == ey
       ? (a, b, elWord(ex, sx), elWord(ey, sy))
@@ -211,11 +231,13 @@ PairPart _dayStemPart(PairPerson a, PairPerson b) {
           : (a, b, '', ''); // 상극은 아래에서
   if (gs.isNotEmpty) {
     return PairPart('일간 궁합', '상생 · 살려 주는 사이', 15, 20,
-        '${giver.name}의 $gs 기운이 ${taker.name}의 $ts 기운을 살려요. ${eunNeun(taker.name)} ${giver.name} 곁에서 힘을 얻고, ${eunNeun(giver.name)} ${eulReul(taker.name)} 챙기며 보람을 느껴요.');
+        '${giver.name}의 $gs 기운이 ${taker.name}의 $ts 기운을 살려요. ${eunNeun(taker.name)} ${giver.name} 곁에서 힘을 얻고, ${eunNeun(giver.name)} ${eulReul(taker.name)} 챙기며 보람을 느껴요.',
+        code: 'stem:gen:${taker.name}');
   }
   final (ruler, ruled, rs, rds) = (ex + 2) % 5 == ey ? (a, b, elWord(ex, sx), elWord(ey, sy)) : (b, a, elWord(ey, sy), elWord(ex, sx));
   return PairPart('일간 궁합', '상극 · 한쪽이 이끄는 사이', 5, 20,
-      '${ruler.name}의 $rs 기운이 ${ruled.name}의 $rds 기운을 누르는 관계예요. ${iGa(ruler.name)} 이끌고 ${iGa(ruled.name)} 맞춰 주기 쉬워서, ${ruled.name}의 속도를 기다려 주는 게 중요해요.');
+      '${ruler.name}의 $rs 기운이 ${ruled.name}의 $rds 기운을 누르는 관계예요. ${iGa(ruler.name)} 이끌고 ${iGa(ruled.name)} 맞춰 주기 쉬워서, ${ruled.name}의 속도를 기다려 주는 게 중요해요.',
+      code: 'stem:control:${ruler.name}:${ruled.name}');
 }
 
 const _branchPoints16 = {
@@ -238,7 +260,7 @@ PairPart _branchPart(String label, int x, int y, Map<BranchRel, int> table, int 
   final pts = table[r]!;
   final pair = '${SajuConstants.jiji[x]}${SajuConstants.jiji[y]}';
   return PairPart(label, '${r == BranchRel.none ? '' : '$pair '}${branchRelLabel(r)} · ${_verdict(pts, max)}', pts, max,
-      '$prefix${branchText(x, y)}');
+      '$prefix${branchText(x, y)}', code: 'branch:${r.name}');
 }
 
 (PairPart, int) _complement(PairPerson a, PairPerson b) {
@@ -258,7 +280,8 @@ PairPart _branchPart(String label, int x, int y, Map<BranchRel, int> table, int 
   final total = pts(na) + pts(nb);
   return (
     PairPart('오행 보완', '${_verdict(total, 10)} · 서로 채워 주는 정도', total, 10,
-        '${line(a, b, wa, na)}\n${line(b, a, wb, nb)}'),
+        '${line(a, b, wa, na)}\n${line(b, a, wb, nb)}',
+        code: 'comp:${_elName[na <= nb ? wa : wb]}'),
     total,
   );
 }
@@ -293,5 +316,71 @@ PairChemi pairChemi(PairPerson a, PairPerson b, {PairRelation relation = PairRel
     parts: parts,
     tenGods: [view(a, b), view(b, a)],
     stemHarmony: (a.dayStem - b.dayStem).abs() == 5,
+    improves: improvesFor(parts),
+    who: whoFor(a, b),
   );
+}
+
+/// 약한 항목(받은 점수가 80% 미만, 시간 미상 제외)부터 최대 3개. 없으면 좋은 흐름 지키기.
+List<Improve> improvesFor(List<PairPart> parts) {
+  final weak = parts.where((p) => p.known && p.points * 10 < p.max * 8).toList()
+    ..sort((x, y) => (x.points / x.max).compareTo(y.points / y.max));
+  final seen = <String>{};
+  final out = <Improve>[];
+  for (final p in weak) {
+    final key = p.code.split(':').take(2).join(':');
+    if (!seen.add(key)) continue;
+    final i = _improveOf(p.code);
+    if (i != null) out.add(i);
+    if (out.length == 3) break;
+  }
+  return out.isEmpty ? [keepGoing] : out;
+}
+
+Improve? _improveOf(String code) {
+  final c = code.split(':');
+  switch (c[0]) {
+    case 'stem':
+      return switch (c[1]) {
+        'clash' => const Improve('정면으로 부딪히는 두 사람', '큰 결정은 바로 정하지 말고 "하루만 생각해 보고 다시 얘기하자"를 둘의 약속으로 정해 두세요.'),
+        'same' => const Improve('닮아서 양보가 어려운 관계', '역할을 나눠 보세요. 여행은 한 사람, 돈 관리는 다른 사람처럼 각자 맡을 영역을 정하면 부딪힘이 줄어요.'),
+        'gen' => Improve('주는 쪽만 지치기 쉬운 흐름', '${eunNeun(c[2])} 받은 만큼 "덕분이야"를 말해 주세요. 살려 주는 쪽도 채워져야 오래가요.'),
+        'control' => Improve('한쪽이 끌고 가기 쉬운 관계', '${eunNeun(c[2])} 속도를 한 박자 늦추고, ${eunNeun(c[3])} 싫은 건 그 자리에서 바로 말해 주세요.'),
+        _ => null,
+      };
+    case 'branch':
+      return switch (c[1]) {
+        'clash' => const Improve('싸움이 커지기 쉬운 관계', '싸울 때 규칙 두 가지를 정해 두세요. 지난 일 꺼내지 않기, 30분 쉬었다가 다시 말하기.'),
+        'wonjin' => const Improve('이유 없는 서운함이 쌓이는 관계', '서운함은 그날 "아까 그 말 좀 서운했어" 한 문장으로 꺼내 주세요. 쌓아 두면 이유 없이 미워져요.'),
+        'punish' => const Improve('서로를 고치려는 관계', '지적하기 전에 인정하는 말 하나를 먼저 해 주세요. "이건 네가 잘하잖아, 그런데…"처럼요.'),
+        'harm' => const Improve('겉은 괜찮고 속으로 쌓이는 관계', '일주일에 한 번 "요즘 나한테 서운한 거 없어?"를 물어보는 시간을 가져 보세요.'),
+        'same' => const Improve('닮은 만큼 익숙해지기 쉬운 관계', '가끔은 상대가 좋아하는 걸 먼저 해 보세요. 닮은 둘에게는 새로운 자극이 필요해요.'),
+        'none' => const Improve('함께한 시간이 곧 케미인 관계', '둘만의 작은 전통을 만들어 보세요. 매달 같은 날 같은 곳에 가는 것처럼요.'),
+        _ => null,
+      };
+    case 'comp':
+      return elementActions[c[1]];
+  }
+  return null;
+}
+
+/// 둘 중 누가? 그 오행이 더 많은 사람. 같으면 일간의 음양으로, 그것도 같으면 막상막하.
+List<WhoAnswer> whoFor(PairPerson a, PairPerson b) {
+  return [
+    for (final (q, el, preferYang) in whoQuestions)
+      () {
+        final ca = a.saju.ohengBalance[el] ?? 0, cb = b.saju.ohengBalance[el] ?? 0;
+        final hanja = _elHanja[_elName.indexOf(el)];
+        if (ca != cb) {
+          return WhoAnswer(q, ca > cb ? a.name : b.name, '$el($hanja) 기운 ${ca > cb ? ca : cb} : ${ca > cb ? cb : ca}');
+        }
+        final ya = a.dayStem % 2 == 0, yb = b.dayStem % 2 == 0;
+        if (ya != yb) {
+          final pick = (ya == preferYang) ? a : b;
+          return WhoAnswer(q, pick.name,
+              '$el($hanja) 기운은 $ca : $cb로 같고, ${pick.name}의 일간이 ${preferYang ? '양(陽)이라 조금 더 적극적' : '음(陰)이라 조금 더 부드러운 편'}');
+        }
+        return WhoAnswer(q, null, '$el($hanja) 기운도 $ca : $cb, 일간의 음양도 같아요. 막상막하!');
+      }(),
+  ];
 }

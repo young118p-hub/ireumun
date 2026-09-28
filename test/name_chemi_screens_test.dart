@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chemilab/core/theme/chemi_theme.dart';
 import 'package:chemilab/data/mbti/mbti_history.dart';
 import 'package:chemilab/data/name_chemi/name_chemi_history.dart';
+import 'package:chemilab/data/family_chemi/family_chemi_history.dart';
 import 'package:chemilab/data/pair_chemi/pair_chemi_history.dart';
 import 'package:chemilab/presentation/providers/chemi_provider.dart';
 import 'package:chemilab/presentation/screens/name_chemi_input_screen.dart';
@@ -32,7 +33,7 @@ Future<void> _loadFonts() async {
 Future<ChemiProvider> _provider() async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  return ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs));
+  return ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs), FamilyChemiHistory(prefs));
 }
 
 Widget _app(ChemiProvider chemi, Widget home) => ChangeNotifierProvider.value(
@@ -88,5 +89,9 @@ void main() {
     await tester.drag(find.byType(ListView).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     await expectLater(find.byType(NameChemiResultScreen), matchesGoldenFile('goldens/name_chemi_result_3.png'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+    expect(find.text('케미 올리는 법'), findsOneWidget);
+    await expectLater(find.byType(NameChemiResultScreen), matchesGoldenFile('goldens/name_chemi_result_4.png'));
   });
 }

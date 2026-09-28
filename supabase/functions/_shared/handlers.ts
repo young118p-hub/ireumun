@@ -20,6 +20,7 @@ import {
   buildDiagnosisUpgradePrompt,
   buildNamingPrompt,
   buildNamingSimplePrompt,
+  buildFamilyReportPrompt,
   buildPairReportPrompt,
 } from "./prompts.ts";
 
@@ -134,6 +135,7 @@ function parseGenerateInput(body: Record<string, unknown>): { type: RequestType;
 
 export async function handleGenerate(deps: Deps, user: AuthUser, body: Record<string, unknown>) {
   if (body.type === "pair") return await handleCreatePair(deps, user, body);
+  if (body.type === "family") return await handleCreateFamily(deps, user, body);
   const deviceId = requireDeviceId(body.deviceId);
   const { type, kind, input } = parseGenerateInput(body);
 
@@ -270,6 +272,65 @@ export async function handleCreatePair(deps: Deps, user: AuthUser, body: Record<
 }
 
 // ============================================================
+// 가족 케미: 결제할 결과 자리 만들기 (우리 케미와 같은 방식, 3~5명)
+// ============================================================
+
+const FAMILY_ROLES = ["me", "mom", "dad", "sibling", "child", "spouse", "other"];
+const ELEMENTS = ["목", "화", "토", "금", "수"];
+
+export function parseFamilyInput(body: Record<string, unknown>): Record<string, unknown> {
+  const people = list(body.people, "가족", 5);
+  if (people.length < 3) throw new ApiError(400, "invalid_input", "가족 케미는 3명부터 볼 수 있어요.");
+  const rules = (body.rules ?? {}) as Record<string, any>;
+  const oheng = (rules.oheng ?? {}) as Record<string, unknown>;
+  return {
+    people: people.map((p: any, i: number) => {
+      if (!FAMILY_ROLES.includes(p?.role)) throw new ApiError(400, "invalid_input", `입력값을 확인해 주세요 (역할 ${i + 1}).`);
+      return {
+        role: p.role,
+        roleLabel: str(p?.roleLabel, `역할 ${i + 1}`, 1, 10),
+        name: str(p?.name, `이름 ${i + 1}`, 1, 6),
+        birthInfo: str(p?.birthInfo, `생일 ${i + 1}`, 4, 40),
+        saju: saju(p?.saju, `사주 ${i + 1}`),
+        birth: {
+          y: int(p?.birth?.y, `생일 ${i + 1}`, 1900, 2100),
+          m: int(p?.birth?.m, `생일 ${i + 1}`, 1, 12),
+          d: int(p?.birth?.d, `생일 ${i + 1}`, 1, 31),
+          h: int(p?.birth?.h, `생일 ${i + 1}`, -1, 23),
+        },
+      };
+    }),
+    rules: {
+      score: int(rules.score, "점수", 0, 100),
+      title: str(rules.title, "제목", 1, 60),
+      oheng: Object.fromEntries(ELEMENTS.map((e) => [e, int(oheng[e], "오행", 0, 40)])),
+      missing: (Array.isArray(rules.missing) ? rules.missing : []).filter((e: unknown) => ELEMENTS.includes(e as string)),
+      pairs: list(rules.pairs, "두 사람씩", 10).map((x: any) => ({
+        a: str(x?.a, "두 사람씩", 1, 6),
+        b: str(x?.b, "두 사람씩", 1, 6),
+        score: int(x?.score, "두 사람씩", 0, 100),
+        title: str(x?.title, "두 사람씩", 1, 60),
+      })),
+    },
+  };
+}
+
+export async function handleCreateFamily(deps: Deps, user: AuthUser, body: Record<string, unknown>) {
+  const deviceId = requireDeviceId(body.deviceId);
+  const input = parseFamilyInput(body);
+  const row = await deps.repo.insertResult({
+    user_id: user.id,
+    device_id: deviceId,
+    kind: "family",
+    request_type: "family",
+    input,
+    content: {},
+    is_free_trial: false,
+  });
+  return { result: viewOf(row) };
+}
+
+// ============================================================
 // 내 상태 (무료 체험·남은 미리보기·결과 복원)
 // ============================================================
 
@@ -382,6 +443,12 @@ async function deliver(deps: Deps, user: AuthUser, productId: ProductId, token: 
       await generatePairReport(deps, row);
     }
   }
+  if (productId === "chemi_family") {
+    const [row] = await deps.repo.getResults(user.id, resultIds);
+    if (row && !row.content.report) {
+      await generateFamilyReport(deps, row);
+    }
+  }
 
   await deps.repo.markDelivered(token);
   const rows = await deps.repo.getResults(user.id, resultIds);
@@ -421,6 +488,26 @@ async function generatePairReport(deps: Deps, row: ResultRow) {
       clashPoints: (json.clashPoints as unknown[]).slice(0, 2),
       yearFlow: json.yearFlow,
       advice: (json.advice as unknown[]).slice(0, 3),
+    },
+  });
+}
+
+/** 가족 케미 전체 리포트 (결제 검증 뒤 한 번). 한 사람씩 조언은 가족 수만큼 */
+async function generateFamilyReport(deps: Deps, row: ResultRow) {
+  const count = ((row.input as any).people as unknown[]).length;
+  const valid = (j: any) =>
+    Array.isArray(j.strengths) && j.strengths.length >= 3 &&
+    Array.isArray(j.cautions) && j.cautions.length >= 2 &&
+    Array.isArray(j.members) && j.members.length >= count &&
+    typeof j.yearFlow === "string" && j.yearFlow.length > 0;
+  const json = await generateJson(deps.llm, buildFamilyReportPrompt(row.input as any), valid, "family_report");
+  await deps.repo.updateContent(row.id, {
+    ...row.content,
+    report: {
+      strengths: (json.strengths as unknown[]).slice(0, 3),
+      cautions: (json.cautions as unknown[]).slice(0, 2),
+      members: (json.members as unknown[]).slice(0, count),
+      yearFlow: json.yearFlow,
     },
   });
 }

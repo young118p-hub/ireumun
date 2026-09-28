@@ -5,6 +5,8 @@
 // - 문구의 "{E}" 같은 자리는 그 글자를 가진 쪽 유형으로 채운다. MBTI는 J/P로 끝나서
 //   뒤에 오는 조사는 늘 모음 뒤 형태(가/는/를/의)다.
 
+import '../chemi_common/improve.dart';
+import '../chemi_common/who.dart';
 import 'mbti_content.dart';
 
 export 'mbti_content.dart' show MbtiProfile, mbtiProfiles;
@@ -57,6 +59,8 @@ class MbtiChemi {
   final String love;
   final String friend;
   final String work;
+  final List<Improve> improves; // 케미 올리는 법 (점수가 낮은 축부터 3개)
+  final List<WhoAnswer> who; // 둘 중 누가?
 
   const MbtiChemi({
     required this.me,
@@ -70,6 +74,8 @@ class MbtiChemi {
     required this.love,
     required this.friend,
     required this.work,
+    required this.improves,
+    required this.who,
   });
 
   MbtiProfile get meProfile => mbtiProfiles[me]!;
@@ -159,7 +165,7 @@ MbtiChemi mbtiChemi(String me, String you) {
 
   // {E}, {I} … 자리를 그 글자를 가진 쪽 유형으로
   String fill(String text) {
-    var out = text;
+    var out = text.replaceAll('{ME}', me).replaceAll('{YOU}', you);
     for (final a in _Axis.values) {
       for (final letter in [a.a, a.b]) {
         final owner = me[a.pos] == letter ? me : you;
@@ -190,6 +196,22 @@ MbtiChemi mbtiChemi(String me, String you) {
   ];
   final (love, friend, work) = situations[key]!;
 
+  // 케미 올리는 법: 받은 점수 비율이 낮은 축부터 3개 (같으면 결정 → 대화 → 에너지 → 생활 순)
+  final order = [_Axis.tf, _Axis.ns, _Axis.ei, _Axis.jp];
+  final ranked = [...order]..sort((x, y) {
+      double r(_Axis a) => (same(a) ? _add[a]!.same : _add[a]!.diff) / [_add[a]!.same, _add[a]!.diff].reduce((p, q) => p > q ? p : q);
+      final c = r(x).compareTo(r(y));
+      return c != 0 ? c : order.indexOf(x) - order.indexOf(y);
+    });
+  final improves = [
+    for (final a in ranked.take(3))
+      () {
+        final t = axisImproves[a.name]!;
+        final (title, action) = !same(a) ? t.$3 : (me[a.pos] == a.a ? t.$1 : t.$2);
+        return Improve(fill(title), fill(action));
+      }(),
+  ];
+
   return MbtiChemi(
     me: me,
     you: you,
@@ -202,6 +224,13 @@ MbtiChemi mbtiChemi(String me, String you) {
     love: love,
     friend: friend,
     work: work,
+    improves: improves,
+    who: [
+      for (final (q, pos, letter, bothHave, neither) in mbtiWho)
+        me[pos] != you[pos]
+            ? WhoAnswer(q, me[pos] == letter ? me : you, '$letter vs ${me[pos] == letter ? you[pos] : me[pos]}')
+            : WhoAnswer(q, null, me[pos] == letter ? bothHave : neither),
+    ],
   );
 }
 

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/saju_input.dart';
 import '../models/saved_result.dart';
+import '../family_chemi/family_chemi_history.dart';
 import '../pair_chemi/pair_chemi.dart';
 import '../pair_chemi/pair_chemi_history.dart';
 import 'device_id_service.dart';
@@ -54,6 +55,10 @@ class RemoteResult {
   }) : kindName = kindName ?? (kind == SavedResultType.naming ? 'naming' : 'diagnosis');
 
   bool get isPair => kindName == 'pair';
+  bool get isFamily => kindName == 'family';
+
+  /// 케미 기록이 받는 결과 (우리 케미·가족 케미)
+  bool get isChemi => isPair || isFamily;
 
   /// 모르는 종류(앞으로 추가될 결과)는 kind가 null → 작명·진단 저장소에 넣지 않고 건너뛴다.
   /// 예전엔 byName이 예외를 던져서 동기화(me)가 통째로 실패했다.
@@ -265,6 +270,35 @@ Map<String, dynamic> pairRequest(PairChemiRecord record) {
         for (final p in c.parts) {'label': p.label, 'badge': p.badge, 'points': p.points, 'max': p.max, 'text': p.text},
       ],
       'tenGods': [for (final g in c.tenGods) {'from': g.from, 'to': g.to, 'name': g.name}],
+    },
+  };
+}
+
+/// 가족 케미: 결제할 결과 자리 만들기 (AI 없음. 무료 점수·해설은 규칙으로 이미 계산)
+Map<String, dynamic> familyRequest(FamilyChemiRecord record) {
+  final c = record.chemi;
+  return {
+    'type': 'family',
+    'people': [
+      for (final (i, m) in record.members.indexed)
+        {
+          'role': m.role.name,
+          'roleLabel': m.role.label,
+          'name': m.name,
+          'birthInfo': '${m.birth.date.year}-${m.birth.date.month.toString().padLeft(2, '0')}-'
+              '${m.birth.date.day.toString().padLeft(2, '0')} ${m.birth.hourKnown ? '${m.birth.hour}시' : '시간 미상'}',
+          'saju': c.members[i].person.saju.toSajuAnalysisJson(),
+          'birth': {'y': m.birth.date.year, 'm': m.birth.date.month, 'd': m.birth.date.day, 'h': m.birth.hour},
+        },
+    ],
+    'rules': {
+      'score': c.score,
+      'title': c.title,
+      'oheng': c.oheng,
+      'missing': c.missing,
+      'pairs': [
+        for (final p in c.pairs) {'a': c.members[p.i].name, 'b': c.members[p.j].name, 'score': p.chemi.score, 'title': p.chemi.title},
+      ],
     },
   };
 }

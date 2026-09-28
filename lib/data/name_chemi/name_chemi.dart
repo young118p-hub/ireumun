@@ -8,6 +8,7 @@
 
 import 'package:flutter/widgets.dart';
 import '../../core/text/josa.dart';
+import '../chemi_common/improve.dart';
 
 const elements = ['목', '화', '토', '금', '수'];
 
@@ -169,6 +170,22 @@ class NameChemi {
         score >= 90 ? '#찰떡케미' : score >= 80 ? '#좋은케미' : '#알아가는케미',
         '#$relationLabel',
       ];
+
+  /// 케미 올리는 법: 기운 관계에 맞는 한 가지 + 두 이름 모두에 없는 오행 채우기 (최대 3개)
+  List<Improve> get improves {
+    final na = _given(a.name), nb = _given(b.name);
+    final rel = switch (relation) {
+      ElementRelation.clash => Improve('다듬으려다 잔소리가 되기 쉬운 사이',
+          '고쳐 주고 싶은 말은 "~해 줄래?" 부탁으로 바꿔 보세요. 같은 말도 명령이 아니라 부탁이면 다르게 들려요.'),
+      ElementRelation.same => Improve('닮아서 같은 걸 함께 놓치는 사이',
+          '둘 다 잘 못하는 일을 하나 정해 외부 도움(앱·알람·친구)을 빌려 보세요. 닮은 둘에게 없는 걸 채우는 게 핵심이에요.'),
+      ElementRelation.harmony => Improve('한쪽만 계속 주는 흐름',
+          '${generates(a.dominant, b.dominant) ? nb : na}도 받은 만큼 표현해 주세요. 살려 주는 쪽이 지치지 않게 "덕분이야" 한마디가 힘이 돼요.'),
+    };
+    final have = {...a.syllables.map((s) => s.$2), ...b.syllables.map((s) => s.$2)};
+    final missing = [for (final e in elements) if (!have.contains(e)) elementActions[e]!];
+    return [rel, ...missing].take(3).toList();
+  }
 }
 
 /// 성을 뺀 이름 (3글자 이상이면 앞 한 글자를 성으로 본다). 조사가 붙는 자리에 쓴다.

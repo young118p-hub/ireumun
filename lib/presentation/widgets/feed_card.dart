@@ -44,6 +44,7 @@ class FeedCard extends StatelessWidget {
         FeedKind.mbti => (ChemiColors.pink, ChemiColors.ink, ChemiColors.ink),
         FeedKind.nameMatch => (const Color(0xFFFFD1E7), ChemiColors.ink, ChemiColors.ink),
         FeedKind.pair => (ChemiColors.ink, ChemiColors.pink, ChemiColors.mutedOnInk),
+        FeedKind.family => (ChemiColors.pink, ChemiColors.ink, ChemiColors.ink),
         FeedKind.nameChemi => (Colors.white, ChemiColors.ink, ChemiColors.muted),
         FeedKind.babyName => (ChemiColors.ink, Colors.white, ChemiColors.mutedOnInk),
       };

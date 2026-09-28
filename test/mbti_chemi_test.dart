@@ -64,6 +64,31 @@ void main() {
       }
     });
 
+    test('케미 올리는 법: 3개, 점수가 낮은 축부터, 자리표시가 남지 않는다', () {
+      for (final a in mbtiTypes) {
+        for (final b in mbtiTypes) {
+          final c = mbtiChemi(a, b);
+          expect(c.improves.length, 3);
+          for (final i in c.improves) {
+            expect('${i.title}${i.action}'.contains('{'), isFalse, reason: '$a×$b ${i.action}');
+          }
+        }
+      }
+      // INFP×ENTJ: T/F 다름이 가장 약한 축(8/10)이라 첫 번째
+      expect(mbtiChemi('INFP', 'ENTJ').improves.first.title, '위로하는 방식의 차이');
+      expect(mbtiChemi('INFP', 'INFJ').improves.map((i) => i.action).join(), contains('INFP'));
+    });
+
+    test('둘 중 누가: 다른 글자면 그 글자를 가진 쪽, 같으면 한마디', () {
+      final c = mbtiChemi('ENFP', 'INTJ');
+      expect(c.who.first.winner, 'ENFP'); // 먼저 연락 = E
+      expect(c.who.first.reason, 'E vs I');
+      expect(c.who[1].winner, 'INTJ'); // 일정표 = J
+      final same = mbtiChemi('INFP', 'INFJ');
+      expect(same.who.first.winner, isNull); // 둘 다 I
+      expect(same.who.first.reason, contains('눈치 싸움'));
+    });
+
     test('16유형 모두 별명·특징·연애 스타일·듣고 싶은 말이 있다', () {
       for (final t in mbtiTypes) {
         final p = mbtiProfiles[t]!;

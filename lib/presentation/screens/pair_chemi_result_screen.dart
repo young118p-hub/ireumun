@@ -115,6 +115,14 @@ class _PairChemiResultScreenState extends State<PairChemiResultScreen> {
                         padding: const EdgeInsets.fromLTRB(22, 16, 22, 16),
                         child: Column(
                           children: [
+                            const SectionTitle('나는 이런 사람', sub: '태어난 날의 천간(일간)이 보여 주는 성격'),
+                            PersonaCard(person: c.a),
+                            const SizedBox(height: 8),
+                            PersonaCard(person: c.b, dark: true),
+                            const SizedBox(height: 18),
+                            const SectionTitle('둘 중 누가?', sub: '두 사람 사주의 오행으로 맞혀 봤어요'),
+                            WhoSection(items: c.who),
+                            const SizedBox(height: 18),
                             const SectionTitle('서로에게 어떤 사람일까', sub: '상대의 일간이 나에게 무엇인지 (십신)'),
                             for (final (i, g) in c.tenGods.indexed) ...[
                               if (i > 0) const SizedBox(height: 8),
@@ -130,10 +138,18 @@ class _PairChemiResultScreenState extends State<PairChemiResultScreen> {
                               const SizedBox(height: 8),
                             ],
                             const SizedBox(height: 10),
-                            if (saved?.paid == true && saved?.report != null)
+                            const SectionTitle('케미 올리는 법', sub: '약한 항목부터'),
+                            ImproveSection(items: c.improves),
+                            const SizedBox(height: 18),
+                            // 가족 케미에서 연 두 사람: 결제는 가족 전체 리포트로 (여기서는 두 사람 리포트를 팔지 않는다)
+                            if (widget.relation == PairRelation.family)
+                              const SizedBox.shrink()
+                            else if (saved?.paid == true && saved?.report != null)
                               _Report(report: saved!.report!)
                             else
-                              _Locked(
+                              LockedReport(
+                                sub: '위 해설을 바탕으로 두 사람만을 위해 더 길게 풀어 드려요',
+                                items: const ['잘 맞는 점 3가지', '부딪히는 점 2가지와 해결법', '올해 두 사람 관계 흐름', '둘을 위한 조언'],
                                 price: naming.product(ProductType.pairChemi).priceString,
                                 busy: busy,
                                 status: naming.purchaseStatus,
@@ -388,76 +404,6 @@ class _PartCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 결제 전: 전체 리포트에 무엇이 있는지 + 결제 버튼
-class _Locked extends StatelessWidget {
-  final String price;
-  final bool busy;
-  final String? status;
-  final VoidCallback onBuy;
-  const _Locked({required this.price, required this.busy, required this.status, required this.onBuy});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: ChemiColors.ink, borderRadius: BorderRadius.circular(24)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('전체 리포트', style: ChemiText.display(20, color: Colors.white)),
-                const Spacer(),
-                const Icon(Icons.lock_outline, color: ChemiColors.pink, size: 20),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text('위 해설을 바탕으로 두 사람만을 위해 더 길게 풀어 드려요',
-                style: ChemiText.body(13, color: ChemiColors.mutedOnInk)),
-            const SizedBox(height: 12),
-            for (final t in ['잘 맞는 점 3가지', '부딪히는 점 2가지와 해결법', '올해 두 사람 관계 흐름', '둘을 위한 조언'])
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check, size: 16, color: ChemiColors.pink),
-                    const SizedBox(width: 8),
-                    Text(t, style: ChemiText.label(14, color: Colors.white)),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: busy ? null : onBuy,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ChemiColors.pink,
-                  foregroundColor: ChemiColors.ink,
-                  disabledBackgroundColor: ChemiColors.inkSoft,
-                ),
-                child: busy
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.2, color: ChemiColors.pink),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(status ?? '결제 준비 중…', style: ChemiText.label(14, color: Colors.white)),
-                        ],
-                      )
-                    : Text('$price 전체 리포트 열기', style: ChemiText.label(16)),
-              ),
-            ),
-          ],
-        ),
-      );
 }
 
 /// 결제 뒤: AI 전체 리포트

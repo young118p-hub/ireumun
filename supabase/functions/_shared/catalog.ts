@@ -3,11 +3,18 @@
 
 import { ApiError } from "./http.ts";
 
-export type Kind = "naming" | "diagnosis" | "pair";
+export type Kind = "naming" | "diagnosis" | "pair" | "family";
 
-export type ProductId = "naming_new" | "diagnosis" | "bundle" | "diagnosis_upgrade" | "chemi_pair";
+export type ProductId = "naming_new" | "diagnosis" | "bundle" | "diagnosis_upgrade" | "chemi_pair" | "chemi_family";
 
-export const PRODUCT_IDS: ProductId[] = ["naming_new", "diagnosis", "bundle", "diagnosis_upgrade", "chemi_pair"];
+export const PRODUCT_IDS: ProductId[] = [
+  "naming_new",
+  "diagnosis",
+  "bundle",
+  "diagnosis_upgrade",
+  "chemi_pair",
+  "chemi_family",
+];
 
 export interface ResultRow {
   id: string;
@@ -27,9 +34,10 @@ export function isProductId(v: unknown): v is ProductId {
   return typeof v === "string" && (PRODUCT_IDS as string[]).includes(v);
 }
 
-/** 결과 본문이 열렸는지 (작명은 naming_new/bundle, 진단은 diagnosis/bundle, 우리 케미는 chemi_pair) */
+/** 결과 본문이 열렸는지 (작명은 naming_new/bundle, 진단은 diagnosis/bundle, 우리 케미는 chemi_pair, 가족 케미는 chemi_family) */
 export function isUnlocked(row: Pick<ResultRow, "kind" | "paid_products">): boolean {
   if (row.kind === "pair") return row.paid_products.includes("chemi_pair");
+  if (row.kind === "family") return row.paid_products.includes("chemi_family");
   const opener = row.kind === "naming" ? "naming_new" : "diagnosis";
   return row.paid_products.includes(opener) || row.paid_products.includes("bundle");
 }
@@ -43,6 +51,7 @@ export function assertUnlockable(productId: ProductId, rows: ResultRow[]): void 
   const naming = rows.filter((r) => r.kind === "naming");
   const diagnosis = rows.filter((r) => r.kind === "diagnosis");
   const pair = rows.filter((r) => r.kind === "pair");
+  const family = rows.filter((r) => r.kind === "family");
   const fail = (message: string) => {
     throw new ApiError(409, "nothing_to_unlock", message);
   };
@@ -71,6 +80,10 @@ export function assertUnlockable(productId: ProductId, rows: ResultRow[]): void 
       if (rows.length !== 1 || pair.length !== 1) fail("결제할 우리 케미 결과를 찾지 못했어요.");
       if (isUnlocked(pair[0])) fail("이미 결제한 결과예요.");
       return;
+    case "chemi_family":
+      if (rows.length !== 1 || family.length !== 1) fail("결제할 가족 케미 결과를 찾지 못했어요.");
+      if (isUnlocked(family[0])) fail("이미 결제한 결과예요.");
+      return;
   }
 }
 
@@ -94,11 +107,16 @@ export function defaultTargets(productId: ProductId, rows: ResultRow[]): ResultR
       return pick(newest("diagnosis", (r) => isUnlocked(r) && !r.paid_products.includes("diagnosis_upgrade")));
     case "chemi_pair":
       return pick(newest("pair", locked));
+    case "chemi_family":
+      return pick(newest("family", locked));
   }
 }
 
 /** 우리 케미 전체 리포트 칸 수 (잘 맞는 점, 부딪히는 점, 올해 흐름, 조언) */
 export const PAIR_REPORT_SECTIONS = 4;
+
+/** 가족 케미 전체 리포트 칸 수 (강점, 주의할 점, 한 사람씩, 올해 흐름) */
+export const FAMILY_REPORT_SECTIONS = 4;
 
 export interface ResultView {
   id: string;
@@ -128,6 +146,9 @@ export function viewOf(row: ResultRow): ResultView {
     // 무료 부분(점수·해설)은 앱이 규칙으로 만든다. 서버의 AI 리포트는 결제 뒤에만.
     content = {};
     lockedCount = PAIR_REPORT_SECTIONS;
+  } else if (!unlocked && row.kind === "family") {
+    content = {};
+    lockedCount = FAMILY_REPORT_SECTIONS;
   } else if (!unlocked && row.kind === "diagnosis") {
     const d = c.diagnosis ?? {};
     content = {

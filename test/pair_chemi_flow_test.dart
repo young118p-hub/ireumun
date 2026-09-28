@@ -11,6 +11,7 @@ import 'package:chemilab/data/models/birth_value.dart';
 import 'package:chemilab/data/models/saju_input.dart';
 import 'package:chemilab/data/name_chemi/name_chemi_history.dart';
 import 'package:chemilab/data/pair_chemi/pair_chemi.dart';
+import 'package:chemilab/data/family_chemi/family_chemi_history.dart';
 import 'package:chemilab/data/pair_chemi/pair_chemi_history.dart';
 import 'package:chemilab/data/services/api_service.dart';
 import 'package:chemilab/data/services/purchase_service.dart';
@@ -40,8 +41,8 @@ void main() {
     await purchases.initialize();
     naming = NamingProvider(purchaseService: purchases, storageService: storage, api: api);
     final prefs = await SharedPreferences.getInstance();
-    chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs), api: api);
-    naming.onPairResult = chemi.applyPairRemote;
+    chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs), FamilyChemiHistory(prefs), api: api);
+    naming.onChemiResult = chemi.applyRemote;
   }
 
   setUp(() async {

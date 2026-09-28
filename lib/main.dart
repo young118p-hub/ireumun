@@ -11,6 +11,7 @@ import 'core/config/app_env.dart';
 import 'core/theme/chemi_theme.dart';
 import 'data/mbti/mbti_history.dart';
 import 'data/name_chemi/name_chemi_history.dart';
+import 'data/family_chemi/family_chemi_history.dart';
 import 'data/pair_chemi/pair_chemi_history.dart';
 import 'data/services/api_service.dart';
 import 'data/services/device_id_service.dart';
@@ -62,8 +63,9 @@ void main() async {
     };
 
   final prefs = await SharedPreferences.getInstance();
-  final chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs), api: api);
-  provider.onPairResult = chemi.applyPairRemote;
+  final chemi = ChemiProvider(MbtiHistory(prefs), NameChemiHistory(prefs), PairChemiHistory(prefs), FamilyChemiHistory(prefs),
+      api: api);
+  provider.onChemiResult = chemi.applyRemote;
 
   runApp(ChemiLabApp(provider: provider, chemi: chemi));
 

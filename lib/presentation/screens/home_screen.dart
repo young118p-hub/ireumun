@@ -19,6 +19,7 @@ import '../widgets/status_scrim.dart';
 import 'diagnosis_input_screen.dart';
 import 'mbti_pick_screen.dart';
 import 'name_chemi_input_screen.dart';
+import 'family_chemi_input_screen.dart';
 import 'pair_chemi_input_screen.dart';
 import 'naming_input_screen.dart';
 
@@ -111,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: _MenuTile(
                               title: '가족 케미',
                               enabled: Features.familyChemi,
-                              onTap: () {},
+                              onTap: () => _push(context, const FamilyChemiInputScreen()),
                             ),
                           ),
                         ],

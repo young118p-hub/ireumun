@@ -11,6 +11,7 @@ import '../../data/pair_chemi/pair_chemi.dart';
 import '../../data/pair_chemi/pair_chemi_history.dart';
 import '../providers/chemi_provider.dart';
 import '../widgets/birth_input.dart';
+import '../widgets/status_scrim.dart';
 import 'pair_chemi_result_screen.dart';
 
 class PairChemiInputScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class PairChemiInputScreen extends StatefulWidget {
 }
 
 class _PairChemiInputScreenState extends State<PairChemiInputScreen> {
+  final _scroll = ScrollController();
   PairRelation _relation = PairRelation.lover;
   late final PairInput? _saved = context.read<ChemiProvider>().myProfile;
   late final _meName = TextEditingController(text: _saved?.name == '나' ? '' : _saved?.name ?? '');
@@ -32,6 +34,7 @@ class _PairChemiInputScreenState extends State<PairChemiInputScreen> {
 
   @override
   void dispose() {
+    _scroll.dispose();
     _meName.dispose();
     _youName.dispose();
     super.dispose();
@@ -48,7 +51,9 @@ class _PairChemiInputScreenState extends State<PairChemiInputScreen> {
     final you = PairInput(_nameOr(_youName, '상대'), _youBirth);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => PairChemiResultScreen(me: me, you: you, relation: _relation)),
+      MaterialPageRoute(
+        builder: (_) => PairChemiResultScreen(me: me, you: you, relation: _relation),
+      ),
     );
   }
 
@@ -61,96 +66,104 @@ class _PairChemiInputScreenState extends State<PairChemiInputScreen> {
         body: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
+              child: Stack(
                 children: [
-                  Container(
-                    padding: EdgeInsets.fromLTRB(12, top + 4, 22, 22),
-                    decoration: const BoxDecoration(
-                      color: ChemiColors.pink,
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          tooltip: '뒤로',
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: ChemiColors.ink),
+                  ListView(
+                    controller: _scroll,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.fromLTRB(12, top + 4, 22, 22),
+                        decoration: const BoxDecoration(
+                          color: ChemiColors.pink,
+                          borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('우리 케미', style: ChemiText.display(34)),
-                              const SizedBox(height: 4),
-                              Text('두 사람의 사주로 보는 진짜 케미', style: ChemiText.body(14)),
-                              Text('점수와 해설은 무료, 전체 리포트만 유료예요', style: ChemiText.label(12)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 20, 22, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('어떤 사이예요?', style: ChemiText.display(18)),
-                        const SizedBox(height: 8),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final (i, r) in PairRelation.values.indexed) ...[
-                              if (i > 0) const SizedBox(width: 8),
-                              Expanded(
-                                child: Semantics(
-                                  button: true,
-                                  selected: r == _relation,
-                                  child: Material(
-                                    color: r == _relation ? ChemiColors.pink : Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(14),
-                                      onTap: () => setState(() => _relation = r),
-                                      child: SizedBox(
-                                        height: 46,
-                                        child: Center(child: Text(r.label, style: ChemiText.label(15))),
+                            IconButton(
+                              tooltip: '뒤로',
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: ChemiColors.ink),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('우리 케미', style: ChemiText.display(34)),
+                                  const SizedBox(height: 4),
+                                  Text('두 사람의 사주로 보는 진짜 케미', style: ChemiText.body(14)),
+                                  Text('점수와 해설은 무료, 전체 리포트만 유료예요', style: ChemiText.label(12)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 20, 22, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('어떤 사이예요?', style: ChemiText.display(18)),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                for (final (i, r) in PairRelation.pickable.indexed) ...[
+                                  if (i > 0) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Semantics(
+                                      button: true,
+                                      selected: r == _relation,
+                                      child: Material(
+                                        color: r == _relation ? ChemiColors.pink : Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(14),
+                                          onTap: () => setState(() => _relation = r),
+                                          child: SizedBox(
+                                            height: 46,
+                                            child: Center(child: Text(r.label, style: ChemiText.label(15))),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            _PersonSection(
+                              title: '나',
+                              nameHint: '부르는 이름 (비우면 "나")',
+                              name: _meName,
+                              birth: _meBirth,
+                              hourPending: _meHourPending,
+                              onBirth: (b) => setState(() => _meBirth = b),
+                              onHourPending: (v) => setState(() => _meHourPending = v),
+                            ),
+                            const SizedBox(height: 28),
+                            _PersonSection(
+                              title: '상대',
+                              nameHint: '부르는 이름 (비우면 "상대")',
+                              name: _youName,
+                              birth: _youBirth,
+                              hourPending: _youHourPending,
+                              onBirth: (b) => setState(() => _youBirth = b),
+                              onHourPending: (v) => setState(() => _youHourPending = v),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              '태어난 시간까지 넣으면 시주 궁합까지 봐서 더 정확해요.',
+                              style: ChemiText.body(12, color: ChemiColors.muted),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        _PersonSection(
-                          title: '나',
-                          nameHint: '부르는 이름 (비우면 "나")',
-                          name: _meName,
-                          birth: _meBirth,
-                          hourPending: _meHourPending,
-                          onBirth: (b) => setState(() => _meBirth = b),
-                          onHourPending: (v) => setState(() => _meHourPending = v),
-                        ),
-                        const SizedBox(height: 28),
-                        _PersonSection(
-                          title: '상대',
-                          nameHint: '부르는 이름 (비우면 "상대")',
-                          name: _youName,
-                          birth: _youBirth,
-                          hourPending: _youHourPending,
-                          onBirth: (b) => setState(() => _youBirth = b),
-                          onHourPending: (v) => setState(() => _youHourPending = v),
-                        ),
-                        const SizedBox(height: 14),
-                        Text('태어난 시간까지 넣으면 시주 궁합까지 봐서 더 정확해요.',
-                            style: ChemiText.body(12, color: ChemiColors.muted)),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  StatusScrim(controller: _scroll),
                 ],
               ),
             ),
@@ -198,27 +211,27 @@ class _PersonSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: ChemiText.display(20)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: name,
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[가-힣ㄱ-ㅎㅏ-ㅣ]'))],
-            style: ChemiText.label(16),
-            decoration: InputDecoration(
-              hintText: nameHint,
-              hintStyle: ChemiText.body(15, color: ChemiColors.disabled),
-              counterText: '',
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 8),
-          BirthInput(value: birth, onChanged: onBirth, hourPending: hourPending, onHourPendingChanged: onHourPending),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: ChemiText.display(20)),
+      const SizedBox(height: 8),
+      TextField(
+        controller: name,
+        maxLength: 6,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[가-힣ㄱ-ㅎㅏ-ㅣ]'))],
+        style: ChemiText.label(16),
+        decoration: InputDecoration(
+          hintText: nameHint,
+          hintStyle: ChemiText.body(15, color: ChemiColors.disabled),
+          counterText: '',
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        ),
+      ),
+      const SizedBox(height: 8),
+      BirthInput(value: birth, onChanged: onBirth, hourPending: hourPending, onHourPendingChanged: onHourPending),
+    ],
+  );
 }

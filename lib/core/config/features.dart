@@ -5,6 +5,6 @@ class Features {
   Features._();
 
   static const pairChemi = true; // 우리 케미 (연인·친구·동료). 전체 리포트 결제는 Play 상품 chemi_pair 등록 뒤 동작
-  static const familyChemi = false; // 가족 케미
+  static const familyChemi = true; // 가족 케미 (3~5명). 전체 리포트 결제는 Play 상품 chemi_family 등록 뒤 동작
   static const nameChemi = true; // 이름 케미 (두 이름 소리 오행, 무료)
 }

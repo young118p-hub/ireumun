@@ -87,6 +87,7 @@ class _ResultRow extends StatelessWidget {
         FeedKind.mbti => ChemiColors.pink,
         FeedKind.nameMatch => const Color(0xFFFFD1E7),
         FeedKind.pair => ChemiColors.pink,
+        FeedKind.family => ChemiColors.ink,
         FeedKind.nameChemi => Colors.white,
         FeedKind.babyName => ChemiColors.ink,
       };
@@ -139,7 +140,14 @@ class _ResultRow extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   item.score?.toString() ?? '?',
-                  style: ChemiText.display(22, color: item.kind == FeedKind.babyName ? Colors.white : ChemiColors.ink),
+                  style: ChemiText.display(
+                    22,
+                    color: switch (item.kind) {
+                      FeedKind.babyName => Colors.white,
+                      FeedKind.family => ChemiColors.pink,
+                      _ => ChemiColors.ink,
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

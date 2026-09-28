@@ -92,6 +92,46 @@ void main() {
     expect(pairChemi(person('민서', 1998, 5, 11, 14), person('지우', 1997, 11, 3, 10)).bothHoursKnown, isTrue);
   });
 
+  test('케미 올리는 법: 약한 항목부터 최대 3개, 없으면 지키는 법, 자리표시 없음', () {
+    final people = [
+      person('민서', 1998, 5, 11, 14), person('지우', 1997, 11, 3), person('하늘', 2001, 2, 4, 9),
+      person('도윤', 1995, 8, 20, 23), person('서연', 1999, 12, 31), person('태양', 1990, 1, 1, 6),
+    ];
+    for (final x in people) {
+      for (final y in people) {
+        final c = pairChemi(x, y);
+        expect(c.improves, isNotEmpty);
+        expect(c.improves.length, lessThanOrEqualTo(3));
+        for (final i in c.improves) {
+          expect('${i.title}${i.action}'.contains('{'), isFalse);
+        }
+        // 약한 항목이 없을 때만 "지키기"
+        final weak = c.parts.where((p) => p.known && p.points * 10 < p.max * 8);
+        expect(c.improves.first.title == '지금 좋은 흐름 지키기', weak.isEmpty);
+      }
+    }
+  });
+
+  test('둘 중 누가: 다섯 문항, 이긴 쪽은 그 오행이 더 많거나 음양 규칙, 근거가 있다', () {
+    final x = person('민서', 1998, 5, 11, 14), y = person('지우', 1997, 11, 3, 10);
+    final c = pairChemi(x, y);
+    expect(c.who.length, 5);
+    for (final w in c.who) {
+      expect(w.reason, isNotEmpty);
+      expect(w.winner == null || w.winner == '민서' || w.winner == '지우', isTrue);
+    }
+    final fire = c.who.first; // 먼저 연락 = 화
+    final fx = x.saju.ohengBalance['화']!, fy = y.saju.ohengBalance['화']!;
+    if (fx != fy) expect(fire.winner, fx > fy ? '민서' : '지우');
+  });
+
+  test('나는 이런 사람: 일간 성격 + 기운 세기', () {
+    final (name, symbol, text) = person('민서', 1998, 5, 11, 14).persona;
+    expect(name, endsWith(')'));
+    expect(symbol, isNotEmpty);
+    expect(text, contains('기운이'));
+  });
+
   test('관계(연인·친구·동료)는 말투만 바꾸고 점수는 같다', () {
     final x = person('민서', 1998, 5, 11, 14), y = person('지우', 1997, 11, 3, 8);
     final lover = pairChemi(x, y), friend = pairChemi(x, y, relation: PairRelation.friend);

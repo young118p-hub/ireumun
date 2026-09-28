@@ -3,6 +3,7 @@
 // 결과가 없거나 점수를 아직 모르면 숫자를 지어내지 않고 비워 둔다.
 
 import 'package:flutter/material.dart';
+import '../data/family_chemi/family_chemi_history.dart';
 import '../data/mbti/mbti_history.dart';
 import '../data/name_chemi/name_chemi_history.dart';
 import '../data/pair_chemi/pair_chemi_history.dart';
@@ -10,12 +11,13 @@ import '../data/models/saved_result.dart';
 import 'providers/chemi_provider.dart';
 import 'providers/naming_provider.dart';
 import 'screens/diagnosis_result_screen.dart';
+import 'screens/family_chemi_result_screen.dart';
 import 'screens/mbti_result_screen.dart';
 import 'screens/name_chemi_result_screen.dart';
 import 'screens/pair_chemi_result_screen.dart';
 import 'screens/result_screen.dart';
 
-enum FeedKind { mbti, nameMatch, pair, nameChemi, babyName }
+enum FeedKind { mbti, nameMatch, pair, family, nameChemi, babyName }
 
 class FeedItem {
   final String id;
@@ -48,6 +50,7 @@ List<FeedItem> buildFeed(NamingProvider naming, ChemiProvider chemi) {
     for (final r in chemi.mbtiRecords) _fromMbti(r, chemi),
     for (final r in chemi.nameRecords) _fromName(r, chemi),
     for (final r in chemi.pairRecords) _fromPair(r, chemi),
+    for (final r in chemi.familyRecords) _fromFamily(r, chemi),
     for (final r in naming.savedResults) _fromSaved(r, naming),
   ];
   items.sort((a, b) => b.at.compareTo(a.at));
@@ -108,6 +111,25 @@ FeedItem _fromPair(PairChemiRecord r, ChemiProvider chemi) {
       MaterialPageRoute(builder: (_) => PairChemiResultScreen(me: r.a, you: r.b, relation: r.relation, record: false)),
     ),
     delete: () => chemi.deletePair(r.id),
+  );
+}
+
+FeedItem _fromFamily(FamilyChemiRecord r, ChemiProvider chemi) {
+  final c = r.chemi;
+  return FeedItem(
+    id: r.id,
+    kind: FeedKind.family,
+    label: '가족 케미 · ${r.members.length}명',
+    headline: r.members.map((m) => m.name).join('·'),
+    score: c.score,
+    summary: c.title,
+    at: r.at,
+    isPreview: !r.paid,
+    open: (context) => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => FamilyChemiResultScreen(members: r.members, record: false)),
+    ),
+    delete: () => chemi.deleteFamily(r.id),
   );
 }
 

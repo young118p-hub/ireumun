@@ -157,6 +157,9 @@ class _NameChemiResultScreenState extends State<NameChemiResultScreen> {
                             const SectionTitle('두 기운이 만나면'),
                             TextCard(title: c.title, body: c.pairText),
                             const SizedBox(height: 18),
+                            const SectionTitle('케미 올리는 법'),
+                            ImproveSection(items: c.improves),
+                            const SizedBox(height: 18),
                             const SectionTitle('점수 근거', sub: '기본 58점에 더해진 점수'),
                             _Parts(chemi: c),
                             if (Features.pairChemi) ...[

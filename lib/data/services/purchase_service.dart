@@ -17,7 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
 /// 상품 타입
-enum ProductType { naming, diagnosis, bundle, diagnosisUpgrade, pairChemi }
+enum ProductType { naming, diagnosis, bundle, diagnosisUpgrade, pairChemi, familyChemi }
 
 /// 가격 기본값 — 여기 한 곳에서만 정의한다.
 /// 실제 청구 금액은 Play Console 설정값이고, 스토어 정보를 받으면 그 금액을 표시한다.
@@ -29,6 +29,7 @@ class Prices {
   static const bundle = 10900; // 작명 + 진단 (12,800) - 1,900
   static const diagnosisUpgrade = 9900;
   static const pairChemi = 4900; // 우리 케미 전체 리포트
+  static const familyChemi = 5900; // 가족 케미 전체 리포트
 
   static String format(int won) => '₩${NumberFormat('#,###').format(won)}';
 }
@@ -231,6 +232,20 @@ class PurchaseService {
         '부딪히는 점 2가지와 해결법',
         '올해 두 사람 관계 흐름',
         '둘을 위한 조언',
+      ],
+    ),
+    PlanProduct(
+      productId: 'chemi_family',
+      type: ProductType.familyChemi,
+      label: '가족 케미 전체 리포트',
+      subtitle: '가족의 강점·주의할 점·한 사람씩 조언·올해 흐름',
+      fallbackPrice: Prices.familyChemi,
+      nameCount: 0,
+      features: [
+        '우리 가족의 강점 3가지',
+        '주의할 점 2가지와 해결법',
+        '한 사람씩 가족에게 해 주면 좋은 것',
+        '올해 우리 가족 흐름',
       ],
     ),
   ];

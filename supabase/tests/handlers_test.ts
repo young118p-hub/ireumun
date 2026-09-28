@@ -319,3 +319,68 @@ Deno.test("우리 케미: 결제 검증 뒤에만 AI 리포트, 같은 영수증
   assertEquals(labels, ["pair_report"]);
   assertEquals(await code(handlePrepare(deps, USER, { productId: "chemi_pair", resultIds: [result.id] })), "nothing_to_unlock");
 });
+
+// ============================================================
+// 가족 케미
+// ============================================================
+
+const familyBody = (over: Record<string, unknown> = {}) => ({
+  type: "family",
+  deviceId: DEVICE,
+  people: [
+    { role: "me", roleLabel: "나", name: "민서", birthInfo: "1998-05-11 14시", saju: SAJU, birth: { y: 1998, m: 5, d: 11, h: 14 } },
+    { role: "mom", roleLabel: "엄마", name: "엄마", birthInfo: "1970-08-02 미상", saju: SAJU, birth: { y: 1970, m: 8, d: 2, h: -1 } },
+    { role: "dad", roleLabel: "아빠", name: "아빠", birthInfo: "1968-11-20 6시", saju: SAJU, birth: { y: 1968, m: 11, d: 20, h: 6 } },
+  ],
+  rules: {
+    score: 81,
+    title: "따로 또 같이 잘 굴러가는 가족",
+    oheng: { 목: 5, 화: 4, 토: 6, 금: 4, 수: 5 },
+    missing: [],
+    pairs: [
+      { a: "민서", b: "엄마", score: 70, title: "t" },
+      { a: "민서", b: "아빠", score: 80, title: "t" },
+      { a: "엄마", b: "아빠", score: 85, title: "t" },
+    ],
+  },
+  ...over,
+});
+
+Deno.test("가족 케미: 결과 자리 만들기는 AI를 부르지 않고, 3~5명만 받는다", async () => {
+  const { deps, llmCalls } = setup();
+  const { result } = await handleGenerate(deps, USER, familyBody()) as any;
+  assertEquals(result.kind, "family");
+  assertEquals(result.unlocked, false);
+  assertEquals(result.content, {});
+  assertEquals(result.lockedCount, 4);
+  assertEquals(llmCalls.length, 0);
+  const two = familyBody().people.slice(0, 2);
+  assertEquals(await code(handleGenerate(deps, USER, familyBody({ people: two }))), "invalid_input");
+  const bad = [...familyBody().people];
+  bad[1] = { ...bad[1], role: "boss" };
+  assertEquals(await code(handleGenerate(deps, USER, familyBody({ people: bad }))), "invalid_input");
+});
+
+Deno.test("가족 케미: 결제 검증 뒤에만 AI 리포트 (한 사람씩 조언은 가족 수만큼), 한 번만 생성", async () => {
+  const labels: (string | undefined)[] = [];
+  const report = {
+    strengths: [1, 2, 3].map((i) => ({ title: `강${i}`, body: "b" })),
+    cautions: [1, 2].map((i) => ({ title: `주${i}`, body: "b" })),
+    members: ["민서", "엄마", "아빠"].map((name) => ({ name, body: "b" })),
+    yearFlow: "흐름",
+  };
+  const { deps } = setup({
+    llm: async (_p, label) => { labels.push(label); return JSON.stringify(report); },
+    purchases: { "tok-family000": paid() },
+  });
+  const { result } = await handleGenerate(deps, USER, familyBody()) as any;
+  assertEquals(await code(handlePrepare(deps, USER, { productId: "chemi_pair", resultIds: [result.id] })), "nothing_to_unlock");
+  await handlePrepare(deps, USER, { productId: "chemi_family", resultIds: [result.id] });
+
+  const v = { productId: "chemi_family", purchaseToken: "tok-family000", resultIds: [result.id] };
+  const first = await handleVerify(deps, USER, v);
+  assertEquals(first.results[0].unlocked, true);
+  assertEquals((first.results[0].content as any).report.members.length, 3);
+  await handleVerify(deps, USER, v);
+  assertEquals(labels, ["family_report"]);
+});
