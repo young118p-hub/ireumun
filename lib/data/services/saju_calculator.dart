@@ -79,14 +79,17 @@ class SajuCalculator {
     final dayStem = dayIdx % 10;
     final dayBranch = dayIdx % 12;
 
+    // 절기(입춘·월 경계) 판정 기준 시각. 출생 시각을 반영한다.
+    final birthJd = _birthJulianDate(year, month, day, hour);
+
     // 2. 년주 계산 (입춘 기준)
-    final sajuYear = _getSajuYear(year, month, day);
+    final sajuYear = _getSajuYear(year, month, birthJd);
     final yearIdx = ((sajuYear - 4) % 60 + 60) % 60;
     final yearStem = yearIdx % 10;
     final yearBranch = yearIdx % 12;
 
     // 3. 월주 계산 (절기 기준 + 오호결월법)
-    final sajuMonth = _getSajuMonth(year, month, day);
+    final sajuMonth = _getSajuMonth(birthJd);
     final monthStem = _monthStemIndex(yearStem, sajuMonth);
     final monthBranch = ManseryeokData.sajuMonthToJijiIndex(sajuMonth);
 
@@ -188,6 +191,14 @@ class SajuCalculator {
         32045;
   }
 
+  /// 출생 순간의 율리우스일 (UT). 입력 시각은 한국 표준시(UTC+9).
+  /// 시간 미상이면 21시(KST) = 정오(UT)로 둔다. 예전 월주 계산이 쓰던 기준과 같아서,
+  /// 시간 미상 입력의 월주는 수정 전과 똑같이 나온다.
+  static double _birthJulianDate(int year, int month, int day, int hour) {
+    final kstHour = hour >= 0 ? hour : 21;
+    return _julianDayNumber(year, month, day) - 0.5 + (kstHour - 9) / 24.0;
+  }
+
   /// JDN → 60갑자 일주 인덱스 (0=갑자, 1=을축, ..., 59=계해)
   static int _dayGapjaIndex(int jdn) {
     return (jdn + 49) % 60;
@@ -199,16 +210,15 @@ class SajuCalculator {
 
   /// 입춘 기준 사주 연도
   /// 입춘(양력 2/3~5일경) 이전이면 전년도
-  static int _getSajuYear(int year, int month, int day) {
+  /// 입춘 당일은 날짜가 아니라 출생 시각과 입춘 시각을 비교한다
+  /// (날짜만 비교하면 입춘 당일 입춘 전 출생이 다음 해로 잡히는 버그가 있었음)
+  static int _getSajuYear(int year, int month, double birthJd) {
     if (month >= 3) return year;
     if (month == 1) return year - 1;
 
-    // month == 2: 입춘 날짜와 비교
+    // month == 2: 입춘 시각과 비교
     final ipchunJDE = _findSolarTermJDE(year, ManseryeokData.ipchunLongitude);
-    final ipchunDate = _jdeToDateTime(ipchunJDE);
-    final birthDate = DateTime(year, month, day);
-
-    return birthDate.isBefore(ipchunDate) ? year - 1 : year;
+    return birthJd < ipchunJDE ? year - 1 : year;
   }
 
   // ============================================================
@@ -216,10 +226,9 @@ class SajuCalculator {
   // ============================================================
 
   /// 태양 황경 기반 사주 월 판정 (1=인월 ~ 12=축월)
-  static int _getSajuMonth(int year, int month, int day) {
-    final jdn = _julianDayNumber(year, month, day);
-    final jde = jdn.toDouble();
-    final sunLon = _solarLongitude(jde);
+  /// 출생 시각의 태양 황경으로 판정한다 (절입일에 시각을 무시하던 버그 수정)
+  static int _getSajuMonth(double birthJd) {
+    final sunLon = _solarLongitude(birthJd);
 
     // 태양 황경 구간 → 사주 월
     // 345°~15°(0° 통과): 묘월(2)
@@ -336,23 +345,6 @@ class SajuCalculator {
     }
     // fallback
     return [year, 3, 20];
-  }
-
-  /// JDE → DateTime 변환
-  static DateTime _jdeToDateTime(double jde) {
-    final jdn = jde.round();
-    final a = jdn + 32044;
-    final b = (4 * a + 3) ~/ 146097;
-    final c = a - (146097 * b) ~/ 4;
-    final d = (4 * c + 3) ~/ 1461;
-    final e = c - (1461 * d) ~/ 4;
-    final m = (5 * e + 2) ~/ 153;
-
-    final day = e - (153 * m + 2) ~/ 5 + 1;
-    final month = m + 3 - 12 * (m ~/ 10);
-    final yr = 100 * b + d - 4800 + m ~/ 10;
-
-    return DateTime(yr, month, day);
   }
 
   /// 각도를 0~360° 범위로 정규화

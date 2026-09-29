@@ -1,60 +1,38 @@
-# 이름운 - AI 사주 작명 앱
+# 케미연구소 (구 이름운) - AI 사주 작명·궁합 앱 (미출시)
 
 ## Stack
-- Flutter 3.38.9, Dart 3.10.8
-- Provider (상태관리)
-- Claude API via 백엔드 서버 (앱에서 직접 호출 X)
-- in_app_purchase (소모성 크레딧)
-- Supabase Edge Functions (백엔드)
-- Package: com.ireumun.ireumun
-
-## Flutter SDK 경로
-- `C:\Users\com\flutter_sdk` (전역 공유)
+- Flutter 3.38 / Dart 3.10, Provider (상태관리), Hive (기기 저장)
+- Supabase: 익명 계정 인증 + Edge Functions(`naming` / `purchase` / `me`) + Postgres
+- Claude API는 Edge Function에서만 호출 (앱에 키 없음)
+- in_app_purchase (소모성, `autoConsume: false`)
+- Package: com.chemilab.chemilab (Dart 패키지 `chemilab`). 저장소 폴더명·GitHub 저장소는 아직 ireumun
 
 ## Build & Run
 ```bash
-flutter run
-flutter build appbundle
+cp env/example.json env/dev.json   # SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY 채우기 (커밋 금지)
+flutter run --dart-define-from-file=env/dev.json
+flutter test
+cd supabase && deno test -A tests/
 ```
+- `android/`는 커밋하지 않음 → 필요하면 `flutter create --platforms=android --org com.chemilab --project-name chemilab .` 후 `.metadata`·`README.md` 변경은 되돌리고, `AndroidManifest.xml`의 `android:label`을 "케미연구소"로
+- 서버 배포·secrets: `supabase/README.md`
 
-## Architecture
-```
-lib/
-├── core/constants/     ← 사주 상수 (천간지지/오행)
-├── data/
-│   ├── models/         ← SajuInput, NamingResult
-│   └── services/       ← API 서비스, 크레딧 서비스
-└── presentation/
-    ├── providers/      ← NamingProvider
-    ├── screens/        ← Home, Result, Paywall
-    └── widgets/        ← NameCard, SajuCard
+## 구조
+- `lib/data/services/saju_calculator.dart` - 사주 계산 (검증된 로직, **알고리즘 변경 금지**, 버그 수정만). 절입일은 출생 시각으로 판정, 시간 미상은 21시 KST 기준
+- `lib/data/services/api_service.dart` - 서버 호출 + 요청 본문(사주는 기기에서 계산해 보냄)
+- `lib/data/services/purchase_service.dart` - 결제 흐름, 가격(`Prices`, 한 곳에서만)
+- `lib/presentation/providers/naming_provider.dart` - 상태, 결과 보관·재열람
+- `supabase/functions/_shared/` - 핸들러(`handlers.ts`), 상품 규칙(`catalog.ts`), Play 검증(`play.ts`), 프롬프트(`prompts.ts`)
+- `docs/renewal-log.md` - 리뉴얼 단계별 무엇/왜 (작업하면 여기에 기록)
 
-backend/                ← Supabase Edge Function (Claude API 프록시)
-```
-
-## Key Files
-- `lib/data/services/claude_service.dart` - 백엔드 서버 호출 + 재시도 + JSON 파싱
-- `lib/data/services/credit_service.dart` - 크레딧 관리 (구매/차감/잔액)
-- `lib/presentation/providers/naming_provider.dart` - 상태관리
-- `lib/core/constants/saju_constants.dart` - 천간지지/오행 상수
-- `lib/data/models/naming_result.dart` - AI 응답 모델
-
-## 비즈니스 모델 (크레딧 방식)
-- **무료**: 첫 1회 작명 무료, 결과 중 1번 이름만 공개 (나머지 블러)
-- **크레딧 구매** (소모성 인앱결제):
-  - `credits_3` → 3회 / ₩1,900
-  - `credits_10` → 10회 / ₩3,900 (가성비)
-  - `credits_30` → 30회 / ₩6,900 (대량)
-- 크레딧 1회 = 작명 1회 (전체 7개 이름 공개)
-- 무료 체험에서는 1번 이름만 보여주고, 크레딧 사용 시 전체 해금
-
-## 서버 구조
-- 앱 → Supabase Edge Function → Claude API
-- Claude API 키는 서버 환경변수에만 보관
-- 앱에는 API 키 포함되지 않음
+## 결제·결과 규칙
+- 결제 전에는 서버가 미리보기만 보냄 (작명: 첫 이름, 진단: 점수·한 줄 요약). 나머지는 서버에만
+- 순서: `prepare`(풀어줄 결과가 있어야 결제 창) → Play 결제 → `verify` → **기기 저장 → 소비**. 저장 전에 소비하면 안 됨
+- 검증·저장 실패 시 소비하지 않음 → 다음 실행 때 `restorePurchases`로 이어받음 (verify는 같은 영수증에 같은 결과)
+- 무료 미리보기: 기기(ANDROID_ID)·계정당 24시간 3회, 무료 체험은 기기당 1회 (서버 기준)
+- 가격: 작명 ₩7,900 / 진단 ₩4,900 / 묶음 ₩10,900 / 추가 이름 ₩9,900 — Play Console과 맞출 것
 
 ## 디자인
-- 모던 미니멀 (전통 사주앱 느낌 X)
-- Primary: #1A1A2E (네이비)
-- Background: #F8F6F0 (크림)
+- 모던 미니멀 (전통 사주앱 느낌 X), Primary #1A1A2E (네이비), Background #F8F6F0 (크림)
 - 갈색/한지/구닥다리 느낌 사용하지 않음
+- 디자인 토큰은 3단계에서 정리 예정 (지금은 화면마다 색이 직접 들어 있음)

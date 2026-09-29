@@ -32,7 +32,7 @@ class ShareService {
     try {
       final dir = await getTemporaryDirectory();
       final file = File(
-        '${dir.path}/ireumun_card_${DateTime.now().millisecondsSinceEpoch}.png',
+        '${dir.path}/chemilab_card_${DateTime.now().millisecondsSinceEpoch}.png',
       );
       await file.writeAsBytes(imageBytes);
       final result = await GallerySaver.saveImage(file.path);
@@ -43,21 +43,25 @@ class ShareService {
     }
   }
 
-  /// 이미지를 카카오톡 등으로 공유
-  static Future<void> shareImage(Uint8List imageBytes) async {
+  /// 이미지를 카카오톡 등으로 공유. 공유 창을 못 열면 false (부르는 쪽에서 안내)
+  static Future<bool> shareImage(
+    Uint8List imageBytes, {
+    String text = '케미연구소 앱에서 추천받은 이름이에요 ✨',
+  }) async {
     try {
       final dir = await getTemporaryDirectory();
       final file = File(
-        '${dir.path}/ireumun_share_${DateTime.now().millisecondsSinceEpoch}.png',
+        '${dir.path}/chemilab_share_${DateTime.now().millisecondsSinceEpoch}.png',
       );
       await file.writeAsBytes(imageBytes);
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: '이름운 앱에서 추천받은 이름이에요 ✨',
+        text: text,
       );
+      return true;
     } catch (e) {
-      // 공유 실패 시 무시
+      return false;
     }
   }
 
@@ -68,7 +72,7 @@ class ShareService {
     required SajuAnalysis saju,
   }) async {
     final buffer = StringBuffer();
-    buffer.writeln('🎒 이름운 - AI 사주 작명 결과');
+    buffer.writeln('🧪 케미연구소 - 아기 이름 찾기 결과');
     buffer.writeln('');
     buffer.writeln('📋 사주: ${saju.fourPillarsDisplay}');
     buffer.writeln('⚖️ 부족 오행: ${saju.weakElement} / 강한 오행: ${saju.strongElement}');
@@ -83,8 +87,8 @@ class ShareService {
     }
 
     buffer.writeln('');
-    buffer.writeln('이름운 앱에서 추천받은 이름이에요!');
-    buffer.writeln('https://play.google.com/store/apps/details?id=com.ireumun.ireumun');
+    buffer.writeln('케미연구소 앱에서 추천받은 이름이에요!');
+    buffer.writeln('https://play.google.com/store/apps/details?id=com.chemilab.chemilab');
 
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
   }
@@ -96,7 +100,7 @@ class ShareService {
     required SajuAnalysis saju,
   }) async {
     final buffer = StringBuffer();
-    buffer.writeln('이름운 - AI 사주 작명 결과');
+    buffer.writeln('케미연구소 - 아기 이름 찾기 결과');
     buffer.writeln('');
 
     for (int i = 0; i < names.length; i++) {
@@ -105,7 +109,7 @@ class ShareService {
     }
 
     buffer.writeln('');
-    buffer.writeln('이름운 앱에서 추천받은 이름이에요!');
+    buffer.writeln('케미연구소 앱에서 추천받은 이름이에요!');
 
     await Share.share(buffer.toString());
   }

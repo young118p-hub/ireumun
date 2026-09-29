@@ -1,0 +1,4 @@
+{
+  "SUPABASE_URL": "https://<project-ref>.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "<Supabase 대시보드 > Project Settings > API Keys 의 publishable key (예전 anon key도 됨)>"
+}

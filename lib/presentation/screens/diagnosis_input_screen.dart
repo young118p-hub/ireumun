@@ -1,7 +1,10 @@
-// 이름 진단 입력 화면
+// 내 이름 케미 입력 화면 (서버에는 이름 진단으로 요청)
 // 현재 이름 + 생년월일시 입력
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/theme/chemi_theme.dart';
+import '../widgets/lab_loading.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/saju_constants.dart';
 import '../../core/constants/hanja_data.dart';
@@ -51,15 +54,23 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
     super.dispose();
   }
 
+  /// AI 결과를 기다리는 동안 전체 화면 로딩 (버튼 스피너만으론 멈춘 줄 앎)
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Stack(
+        children: [
+          _buildPage(context),
+          Consumer<NamingProvider>(
+            builder: (_, p, _) => p.state == AppState.loading
+                ? const LabLoading(steps: LabLoading.nameChemiSteps, eta: '최대 1분 정도 걸려요')
+                : const SizedBox.shrink(),
+          ),
+        ],
+      );
+
+  Widget _buildPage(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F0),
       appBar: AppBar(
-        title: const Text('이름 진단'),
-        backgroundColor: const Color(0xFF1A1A2E),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('내 이름 케미'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -70,19 +81,19 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0984E3).withValues(alpha: 0.06),
+                color: ChemiColors.pinkDeep.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.search, size: 20, color: Color(0xFF0984E3)),
+                  Icon(Icons.search, size: 20, color: ChemiColors.pinkDeep),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '현재 이름과 사주의 궁합을 분석하고\n더 나은 이름을 추천해드립니다.',
+                      '내 사주와 내 이름이 얼마나 잘 맞는지 측정해요.\n한자까지 넣으면 더 정확해요.',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF666666),
+                        color: ChemiColors.muted,
                         height: 1.5,
                       ),
                     ),
@@ -119,7 +130,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: InputBorder.none,
                       ),
-                      style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+                      style: const TextStyle(fontSize: 15, color: ChemiColors.ink),
                       dropdownColor: Colors.white,
                       items: SajuConstants.commonSurnames.map((s) {
                         return DropdownMenuItem(value: s, child: Text('$s씨'));
@@ -145,13 +156,15 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                     ),
                     child: TextField(
                       controller: _nameController,
+                      // 한글만 (조합 중인 자모 포함). 영문·숫자가 들어가면 무료 횟수만 쓰고 엉뚱한 결과가 나옴
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[가-힣ㄱ-ㅎㅏ-ㅣ]'))],
                       decoration: const InputDecoration(
                         hintText: '이름 (예: 민수)',
-                        hintStyle: TextStyle(color: Color(0xFFB0B0B0)),
+                        hintStyle: TextStyle(color: ChemiColors.muted),
                         contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         border: InputBorder.none,
                       ),
-                      style: const TextStyle(fontSize: 16, color: Color(0xFF1A1A2E)),
+                      style: const TextStyle(fontSize: 16, color: ChemiColors.ink),
                     ),
                   ),
                 ),
@@ -186,7 +199,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
 
             const SizedBox(height: 36),
 
-            // 진단 시작 버튼
+            // 케미 측정 버튼
             _buildSubmitButton(),
 
             const SizedBox(height: 24),
@@ -202,7 +215,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF2C2C2E),
+        color: ChemiColors.ink,
       ),
     );
   }
@@ -222,15 +235,15 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
             _buildLabel('한자 선택'),
             const SizedBox(width: 8),
             const Text(
-              '선택',
-              style: TextStyle(fontSize: 12, color: Color(0xFF0984E3), fontWeight: FontWeight.w500),
+              '선택 · 넣으면 더 정확해요',
+              style: TextStyle(fontSize: 12, color: ChemiColors.pinkDeep, fontWeight: FontWeight.w500),
             ),
           ],
         ),
         const SizedBox(height: 4),
         const Text(
           '한자를 모르시면 선택 안 하셔도 됩니다',
-          style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
+          style: TextStyle(fontSize: 12, color: ChemiColors.muted),
         ),
         const SizedBox(height: 12),
         ...syllables.asMap().entries.map((entry) {
@@ -263,7 +276,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                         width: 34,
                         height: 34,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E),
+                          color: ChemiColors.ink,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
@@ -278,14 +291,14 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward, size: 14, color: Color(0xFFB0B0B0)),
+                      const Icon(Icons.arrow_forward, size: 14, color: ChemiColors.muted),
                       const SizedBox(width: 8),
                       if (_selectedHanja[idx] != null) ...[
                         Text(
                           HanjaData.getChar(_selectedHanja[idx]!),
                           style: const TextStyle(
                             fontSize: 22,
-                            color: Color(0xFF1A1A2E),
+                            color: ChemiColors.ink,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -294,18 +307,18 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                           HanjaData.getMeaning(_selectedHanja[idx]!),
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF666666),
+                            color: ChemiColors.muted,
                           ),
                         ),
                         const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () => setState(() => _selectedHanja[idx] = null),
-                          child: const Icon(Icons.close, size: 16, color: Color(0xFF8E8E93)),
+                          child: const Icon(Icons.close, size: 16, color: ChemiColors.muted),
                         ),
                       ] else
                         const Text(
                           '선택 안 함',
-                          style: TextStyle(fontSize: 13, color: Color(0xFFB0B0B0)),
+                          style: TextStyle(fontSize: 13, color: ChemiColors.muted),
                         ),
                     ],
                   ),
@@ -314,7 +327,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                       padding: EdgeInsets.only(top: 8),
                       child: Text(
                         '이 글자의 한자 정보가 없습니다',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
+                        style: TextStyle(fontSize: 12, color: ChemiColors.muted),
                       ),
                     )
                   else ...[
@@ -337,10 +350,10 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                             width: 64,
                             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFFF8F6F0),
+                              color: isSelected ? ChemiColors.ink : ChemiColors.chrome,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+                                color: isSelected ? ChemiColors.ink : ChemiColors.chrome,
                                 width: 1.5,
                               ),
                             ),
@@ -351,7 +364,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                                   hanjaChar,
                                   style: TextStyle(
                                     fontSize: 22,
-                                    color: isSelected ? Colors.white : const Color(0xFF1A1A2E),
+                                    color: isSelected ? Colors.white : ChemiColors.ink,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -361,7 +374,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                                     meaning,
                                     style: TextStyle(
                                       fontSize: 9,
-                                      color: isSelected ? Colors.white70 : const Color(0xFF8E8E93),
+                                      color: isSelected ? Colors.white70 : ChemiColors.muted,
                                       height: 1.2,
                                     ),
                                     textAlign: TextAlign.center,
@@ -403,24 +416,24 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF1A1A2E) : Colors.white,
+            color: selected ? ChemiColors.ink : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+              color: selected ? ChemiColors.ink : ChemiColors.chrome,
               width: 1.5,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: selected ? Colors.white : const Color(0xFF8E8E93)),
+              Icon(icon, size: 18, color: selected ? Colors.white : ChemiColors.muted),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFF2C2C2E),
+                  color: selected ? Colors.white : ChemiColors.ink,
                 ),
               ),
             ],
@@ -448,14 +461,14 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, color: Color(0xFF8E8E93), size: 18),
+            const Icon(Icons.calendar_today_outlined, color: ChemiColors.muted, size: 18),
             const SizedBox(width: 10),
             Text(
               '${_selectedDate.year}년 ${_selectedDate.month}월 ${_selectedDate.day}일',
-              style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
+              style: const TextStyle(fontSize: 15, color: ChemiColors.ink),
             ),
             const Spacer(),
-            const Icon(Icons.chevron_right, color: Color(0xFFC7C7CC), size: 20),
+            const Icon(Icons.chevron_right, color: ChemiColors.disabled, size: 20),
           ],
         ),
       ),
@@ -473,7 +486,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1A1A2E),
+              primary: ChemiColors.ink,
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -534,7 +547,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                   onTap: () => setState(() => _selectedHour = startHour == 23 ? 23 : startHour + 1),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF1A1A2E) : const Color(0xFFF8F6F0),
+                      color: isSelected ? ChemiColors.ink : ChemiColors.chrome,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -545,14 +558,14 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : const Color(0xFF2C2C2E),
+                            color: isSelected ? Colors.white : ChemiColors.ink,
                           ),
                         ),
                         Text(
                           '${startHour.toString().padLeft(2, '0')}~${((startHour + 2) % 24).toString().padLeft(2, '0')}시',
                           style: TextStyle(
                             fontSize: 9,
-                            color: isSelected ? Colors.white70 : const Color(0xFF8E8E93),
+                            color: isSelected ? Colors.white70 : ChemiColors.muted,
                           ),
                         ),
                       ],
@@ -574,10 +587,10 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF1A1A2E) : Colors.white,
+            color: selected ? ChemiColors.ink : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? const Color(0xFF1A1A2E) : const Color(0xFFE5E5EA),
+              color: selected ? ChemiColors.ink : ChemiColors.chrome,
             ),
           ),
           child: Center(
@@ -586,7 +599,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : const Color(0xFF2C2C2E),
+                color: selected ? Colors.white : ChemiColors.ink,
               ),
             ),
           ),
@@ -606,9 +619,9 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
           child: ElevatedButton(
             onPressed: isLoading ? null : _onSubmit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0984E3),
+              backgroundColor: ChemiColors.ink,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0xFFC7C7CC),
+              disabledBackgroundColor: ChemiColors.disabled,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -631,8 +644,8 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
                     ],
                   )
                 : const Text(
-                    '진단 시작',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1),
+                    '케미 측정하기',
+                    style: TextStyle(fontSize: 18, fontFamily: ChemiFonts.display),
                   ),
           ),
         );
@@ -646,8 +659,8 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
       _showSnackBar('이름을 입력해주세요.');
       return;
     }
-    if (name.characters.length > 3) {
-      _showSnackBar('이름은 1~3글자로 입력해주세요.');
+    if (!RegExp(r'^[가-힣]{1,3}$').hasMatch(name)) {
+      _showSnackBar('이름은 한글 1~3글자로 입력해 주세요. (성 빼고)');
       return;
     }
     if (_knowsHour && _selectedHour < 0) {
@@ -663,6 +676,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
     // 미결제 결과가 있으면 차단 → 결과 화면으로 보냄
     if (provider.hasUnpaidDiagnosis) {
       if (!mounted) return;
+      provider.openUnpaidDiagnosis();
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const DiagnosisResultScreen()),
@@ -702,7 +716,7 @@ class _DiagnosisInputScreenState extends State<DiagnosisInputScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: ChemiColors.warn,
       ),
     );
   }
